@@ -1,0 +1,15 @@
+{
+  "name": "@stilt/http",
+  "version": "0.0.1",
+  "description": "Core component of the stilt framework",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Guylian Cox <guyliancox@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "koa": "^2.5.1",
+    "koa-better-router": "^2.1.1"
+  }
+}

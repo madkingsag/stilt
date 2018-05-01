@@ -1,0 +1,11 @@
+{
+  "name": "@stilt/core",
+  "version": "0.0.1",
+  "description": "Core component of the stilt framework",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Guylian Cox <guyliancox@gmail.com>",
+  "license": "MIT"
+}
