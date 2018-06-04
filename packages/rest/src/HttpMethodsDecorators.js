@@ -24,7 +24,7 @@ function makeHttpMethod(httpMethod): Function {
   return function decorator(path) {
     return function decorate(Class, methodName) {
       if (Class.constructor !== Function) {
-        throw new Error(`Expose non static method as REST endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
+        throw new Error(`Exposing instance methods as REST endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
       }
 
       const target = Class[methodName];
