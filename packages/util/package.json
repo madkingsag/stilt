@@ -1,0 +1,11 @@
+{
+  "name": "@stilt/util",
+  "version": "0.0.1",
+  "description": "Utilitaries used in Stilt Framework",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Guylian Cox <guyliancox@gmail.com>",
+  "license": "MIT"
+}
