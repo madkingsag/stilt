@@ -11,7 +11,7 @@ import { classToResolvers } from './ResolveDecorator';
 
 export { resolve } from './ResolveDecorator';
 
-export default class StiltRest {
+export default class StiltGraphQl {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/graphql');
 
