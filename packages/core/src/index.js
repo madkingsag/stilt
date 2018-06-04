@@ -4,17 +4,41 @@ export default class App {
 
   _plugins = new Map();
 
+  constructor() {
+    setImmediate(() => this.initPlugins());
+
+    this.logger = this.makeLogger('core');
+  }
+
+  async initPlugins() {
+    // TODO init phases VS "load before / after"?
+
+    await this._runPhase('preInit');
+    await this._runPhase('init');
+    await this._runPhase('postInit');
+  }
+
+  _runPhase(phase) {
+    return [...this._plugins.values()].map(plugin => {
+      const methodName = `${phase}Plugin`;
+      if (plugin[methodName]) {
+        this.logger.debug(`Running ${phase} on ${getName(plugin)}`);
+        return plugin[methodName](this);
+      }
+
+      return null;
+    });
+  }
+
   use(plugin) {
     const moduleIdentifier = plugin.MODULE_IDENTIFIER || plugin.constructor.MODULE_IDENTIFIER;
     if (typeof moduleIdentifier !== 'symbol') {
       throw new TypeError(`Trying to load stilt plugin named "${getName(plugin)}" but we cannot uniquely identify it. It is missing the property "MODULE_IDENTIFIER" (must be a Symbol).`);
     }
 
-    if (typeof plugin.initPlugin !== 'function') {
-      throw new TypeError(`Trying to load stilt plugin named "${getName(plugin)}" but it is missing a initPlugin method. (signature: (app: App) => void)`);
+    if (typeof plugin.preInitPlugin !== 'function' && typeof plugin.initPlugin !== 'function' && typeof plugin.postInitPlugin !== 'function') {
+      throw new TypeError(`Trying to load stilt plugin named "${getName(plugin)}" but it is missing an initialization method (preInitPlugin, initPlugin or postInitPlugin). (signature: (app: App) => void)`);
     }
-
-    plugin.initPlugin(this);
 
     this._plugins.set(moduleIdentifier, plugin);
   }
@@ -25,6 +49,11 @@ export default class App {
     }
 
     return this._plugins.get(pluginIdentifier);
+  }
+
+  makeLogger() {
+    // TODO use actual logger & namespace it.
+    return console;
   }
 }
 
