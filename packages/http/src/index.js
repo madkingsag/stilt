@@ -18,6 +18,7 @@ export default class StiltHttp {
   initPlugin() {
     const koa = new Koa();
 
+    this.koa = koa;
     this.router = Router().loadMethods();
 
     koa.use(this.router.middleware());
