@@ -13,20 +13,18 @@ export default class StiltHttp {
 
   constructor(config) {
     this.port = config.port;
+
+    this.koa = new Koa();
+    this.router = Router().loadMethods();
   }
 
   initPlugin(app) {
     this.logger = app.makeLogger('http');
 
-    const koa = new Koa();
-
-    this.koa = koa;
-    this.router = Router().loadMethods();
-
-    koa.use(this.router.middleware());
+    this.koa.use(this.router.middleware());
 
     // TODO only listen plugin if a route is registered
-    koa.listen(this.port, () => {
+    this.koa.listen(this.port, () => {
       this._printServerStarted(this.port);
     });
   }
