@@ -6,8 +6,8 @@ import User from '../models/UserModel';
 export default class UserController {
 
   @resolve('Mutation.createUser')
-  static createUser({ name }) {
+  static createUser({ email }) {
 
-    return User.create({ name });
+    return User.create({ email });
   }
 }
