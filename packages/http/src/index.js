@@ -2,10 +2,14 @@
 
 import Koa from 'koa';
 import Router from 'koa-better-router';
+import ip from 'ip';
+import chalk from 'chalk';
 
 export default class StiltHttp {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/http');
+
+  _declaredEndpoints = [];
 
   constructor(config) {
     this.port = config.port;
@@ -20,8 +24,7 @@ export default class StiltHttp {
 
     // TODO only listen plugin if a route is registered
     koa.listen(this.port, () => {
-      // TODO pretty server started
-      console.log('Server started');
+      this._printServerStarted(this.port);
     });
   }
 
@@ -37,6 +40,86 @@ export default class StiltHttp {
 
     this.router[method](path, asyncCallback);
   }
+
+  /**
+   * Add an endpoint of interest when printing server started log
+   */
+  declareEndpoint(endpointName, endpointPath) {
+    this._declaredEndpoints.push({ name: endpointName, path: endpointPath });
+  }
+
+  /**
+   * @param port
+   * @private
+   */
+  _printServerStarted(port) {
+    chalk.enabled = true;
+
+    const localhost = `http://localhost:${port}`;
+
+    const lines = [
+      chalk.bold('Access URLs:'),
+      '---',
+      ['Localhost', localhost],
+      ['LAN', `http://${ip.address()}:${port}`],
+      '---',
+    ];
+
+    if (this._declaredEndpoints.length > 0) {
+      for (const endpoint of this._declaredEndpoints) {
+        lines.push([endpoint.name, localhost + endpoint.path]);
+      }
+
+      lines.push('---');
+    }
+
+    lines.push(chalk.blue(`Press ${chalk.italic('CTRL-C')} to stop`));
+
+    console.info(`Server started ${chalk.green('✓')}`);
+    console.info();
+    console.info(printTable(lines));
+  }
+}
+
+function printTable(lines) {
+
+  let dividerLength = 0;
+  let titleLength = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (Array.isArray(line)) {
+      const title = line[0];
+      if (titleLength < title.length) {
+        titleLength = title.length;
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+
+    const line = lines[i];
+    if (Array.isArray(line)) {
+      const [title, content] = line;
+      const alignementSpacing = ' '.repeat(titleLength - title.length);
+      lines[i] = `${alignementSpacing}${title}: ${chalk.magenta(content)}`;
+    }
+
+    // remove control characters as they are not visible but still increase .length.
+    const newLine = clearAinsiColors(lines[i]);
+    if (newLine.length > dividerLength) {
+      dividerLength = newLine.length;
+    }
+  }
+
+  const divider = chalk.gray('-'.repeat(dividerLength));
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === '---') {
+      lines[i] = divider;
+    }
+  }
+
+  return lines.map(line => `\t${line}`).join('\n');
 }
 
 // TODO support returned streams (ctx.body = someHTTPStream.on('error', ctx.onerror).pipe(PassThrough()))
@@ -58,3 +141,9 @@ function sendResponse(ctx, body) {
   ctx.body = body;
 }
 
+function clearAinsiColors(str: string): string {
+  // source: https://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
+
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+}

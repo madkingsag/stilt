@@ -9,6 +9,8 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "chalk": "^2.4.1",
+    "ip": "^1.1.5",
     "koa": "^2.5.1",
     "koa-better-router": "^2.1.1"
   }
