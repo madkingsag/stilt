@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "NODE_ENV=production lerna exec --parallel -- babel src -d dist --copy-files",
-    "build:watch": "NODE_ENV=production lerna exec --parallel -- babel src -d dist --copy-files --watch"
+    "build:watch": "NODE_ENV=production lerna exec --parallel -- babel src -d dist --copy-files --watch",
+    "fix-npm": "lerna exec -- rm -rf node_modules && rm package-lock.json && lerna bootstrap"
   },
   "dependencies": {}
 }
