@@ -15,7 +15,9 @@ export default class StiltHttp {
     this.port = config.port;
   }
 
-  initPlugin() {
+  initPlugin(app) {
+    this.logger = app.makeLogger('http');
+
     const koa = new Koa();
 
     this.koa = koa;
@@ -76,9 +78,10 @@ export default class StiltHttp {
 
     lines.push(chalk.blue(`Press ${chalk.italic('CTRL-C')} to stop`));
 
-    console.info(`Server started ${chalk.green('✓')}`);
-    console.info();
-    console.info(printTable(lines));
+    this.logger.info(`Server started ${chalk.green('✓')}`);
+    this.logger.info();
+    this.logger.info(printTable(lines));
+    this.logger.info();
   }
 }
 
