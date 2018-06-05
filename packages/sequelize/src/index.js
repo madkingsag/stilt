@@ -94,10 +94,9 @@ function loadModels(modelsDir) {
     }
 
     const meta = getDbMeta(model);
-    if (meta && meta.relationships) {
-      for (const relationship of meta.relationships) {
-        // eslint-disable-next-line prefer-spread
-        model[relationship.type].apply(model, relationship.parameters);
+    if (meta && meta.associations) {
+      for (const associations of meta.associations) {
+        model[associations.type](...associations.parameters);
       }
     }
   }
