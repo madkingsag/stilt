@@ -6,12 +6,12 @@ import { Options as optionsDecorator } from 'sequelize-decorators';
 const METADATA = Symbol('stilt-sequelize-metadata');
 
 type DbMetaStruct = {
-  relationships: ?SequelizeRelationship[],
+  associations: ?SequelizeAssociationMeta[],
 };
 
-type SequelizeRelationship = {
-  name: string,
-  args: any[],
+type SequelizeAssociationMeta = {
+  type: string,
+  parameters: any[],
 };
 
 function getSetMeta(target): DbMetaStruct {
@@ -26,27 +26,333 @@ export function getDbMeta(target): ?DbMetaStruct {
   return target[METADATA];
 }
 
-// TODO safeguards against existing relationships
-// Make relationships two-way.
-function makeRelationDecorator(name) {
-  return function createRelation(...args) {
-    return function decorateRelation(Model) {
-      const meta = getSetMeta(Model);
-      meta.relationships = meta.relationships || [];
+function addAssociation(model, association) {
+  const meta = getSetMeta(model);
+  meta.associations = meta.associations || [];
 
-      meta.relationships.push({
-        name,
-        args,
+  meta.associations.push(association);
+}
+
+// Make associations two-way.
+function makeAssociationDecorator(associationType, options) {
+  return function createAssociation(targetModel, associationOptions) {
+    return function decorate(sourceModel) {
+
+      if (!associationOptions) {
+        associationOptions = {};
+      }
+
+      addAssociation(sourceModel, {
+        type: associationType,
+        parameters: [targetModel, associationOptions],
       });
 
-      return Model;
+      // create association on target model too.
+      const inverseAssoc = options.getSymmetricalAssociation(associationOptions);
+      if (inverseAssoc != null) {
+
+        addAssociation(targetModel, {
+          type: inverseAssoc.type,
+          parameters: [sourceModel, inverseAssoc.options],
+        });
+      }
+
+      return sourceModel;
     };
   };
 }
 
-export const BelongsTo = makeRelationDecorator('belongsTo');
-export const BelongsToMany = makeRelationDecorator('belongsToMany');
-export const HasMany = makeRelationDecorator('hasMany');
+/*
+ * @BelongsTo(B, optSource = {
+ *   hooks: boolean,
+ *   foreignKey: string,
+ *   onDelete: string,
+ *   onUpdate: string,
+ *   constraints: boolean,
+ *
+ *   as: string,
+ *
+ *   // Added by Stilt
+ *   inverse: {
+ *     type: 'many' | 'one',
+ *     as: string,
+ *     scope: boolean, // ONLY IF "many"
+ *     sourceKey: string // ONLY IF "many"
+ *   },
+ * })
+ * class A {}
+ *
+ * - Adds:
+ *  - A#b_id
+ *  - A#getB()
+ *  - A#setB()
+ *  - A#createB()
+ *
+ * Inverse Association (depending on many VS one per B):
+ *
+ * if inverse.type === 'one'
+ * - B.HasOne(A, {
+ *   hooks: optSource.hooks,
+ *   foreignKey: optSource.foreignKey,
+ *   onDelete: optSource.onDelete,
+ *   onUpdate: optSource.onUpdate,
+ *   constraints: optSource.constraints,
+ *
+ *   as: optSource.inverse.as,
+ * })
+ *
+ * if inverse.type === 'many'
+ * - B.HasMany(A, {
+ *   hooks: optSource.hooks,
+ *   foreignKey: optSource.foreignKey,
+ *   onDelete: optSource.onDelete,
+ *   onUpdate: optSource.onUpdate,
+ *   constraints: optSource.constraints,
+ *
+ *   as: optSource.inverse.as,
+ *   sourceKey: optSource.inverse.sourceKey,
+ *   scope: optSource.inverse.scope,
+ * })
+ */
+export const BelongsTo = makeAssociationDecorator('belongsTo', {
+
+  getSymmetricalAssociation(sourceParams) {
+
+    const inverse = sourceParams.inverse;
+
+    // delete "inverse" extra property from sourceParams as it is not accepted by sequelize
+    delete sourceParams.inverse;
+
+    // inverse is null, user does not want to add inverse association.
+    if (inverse == null) {
+      return null;
+    }
+
+    if (typeof inverse !== 'object') {
+      throw new Error('@BelongsTo "inverse" property must be an object');
+    }
+
+    // delete type from "inverse" so it does not get assigned when overriding for inverse association
+    const type = inverse.type;
+    delete inverse.type;
+
+    if (!['many', 'one'].includes(type)) {
+      throw new Error('@BelongsTo "inverse.type" property must be either "many" or "one"');
+    }
+
+    // copy sourceParams for inverse params and override them with the contents of "inverse"
+    const inverseOptions = { ...sourceParams };
+
+    // as is optional in sequelize, delete the one in inverseParam before assigning overrides
+    // just in case the override does not specify it.
+    delete inverseOptions.as;
+
+    // override using the contents of sourceParams.inverse
+    Object.assign(inverseOptions, inverse);
+
+    return {
+      type: type === 'many' ? 'hasMany' : 'hasOne',
+      options: inverseOptions,
+    };
+  },
+});
+
+/*
+ * @HasOne(B, optSource = {
+ *   hooks: boolean,
+ *   as: string,
+ *   foreignKey: string,
+ *   onDelete: string,
+ *   onUpdate: string,
+ *   constraints: boolean,
+ *
+ *   // Added by Stilt
+ *   inverse: {
+ *     as: string,
+ *   },
+ * })
+ * class A {}
+ *
+ * - Adds:
+ * - B#a_id
+ * - A#getB()
+ * - A#setB()
+ * - A#createB()
+ *
+ * Inverse Association:
+ * - B.BelongsTo(A, {
+ *   hooks: optSource.hooks,
+ *   foreignKey: optSource.foreignKey,
+ *   onDelete: optSource.onDelete,
+ *   onUpdate: optSource.onUpdate,
+ *   constraints: optSource.constraints,
+ *
+ *   as: optSource.inverse.as,
+ * })
+ */
+export const HasOne = makeAssociationDecorator('hasOne', {
+
+  getSymmetricalAssociation: getSymmetricalHasAssociation,
+});
+
+function getSymmetricalHasAssociation(sourceParams) {
+
+  const inverse = sourceParams.inverse;
+
+  // delete "inverse" extra property from sourceParams as it is not accepted by sequelize
+  delete sourceParams.inverse;
+
+  // inverse is null, user does not want to add inverse association.
+  if (inverse == null) {
+    return null;
+  }
+
+  if (typeof inverse !== 'object' && typeof inverse !== 'string') {
+    throw new Error('@BelongsTo "inverse" property must be an object or string');
+  }
+
+  // copy sourceParams for inverse params and override them with the contents of "inverse"
+  const inverseOptions = { ...sourceParams };
+
+  // as is optional in sequelize, delete the one in inverseParam before assigning overrides
+  // just in case the override does not specify it.
+  delete inverseOptions.as;
+
+  // override using the contents of sourceParams.inverse
+  if (typeof inverse === 'string') {
+    inverseOptions.as = inverse;
+  } else {
+    Object.assign(inverseOptions, inverse);
+  }
+
+  return {
+    type: 'belongsTo',
+    options: inverseOptions,
+  };
+}
+
+/*
+ * A.HasMany(B, optSource = {
+ *   hooks: string,
+ *   as: string,
+ *   scope: string,
+ *   onDelete: string,
+ *   onUpdate: string,
+ *   constraints: boolean,
+ *   foreignKey: string,
+ *   sourceKey: string,
+ *
+ *   // Added by Stilt
+ *   inverse: {
+ *     as: string,
+ *   },
+ * })
+ *
+ * - Adds:
+ *  - B#a_id
+ *  - A#getBs()
+ *  - A#setBs()
+ *  - A#createB()
+ *  - A#addB()
+ *  - A#addBs()
+ *  - A#countBs()
+ *  - A#removeB()
+ *  - A#removeBs()
+ *  - A#hasB()
+ *  - A#hasBs()
+ *
+ * Inverse Association:
+ * - B.BelongsTo(A, {
+ *   hooks: optSource.hooks,
+ *   foreignKey: optSource.foreignKey,
+ *   onDelete: optSource.onDelete,
+ *   onUpdate: optSource.onUpdate,
+ *   constraints: optSource.constraints,
+ *
+ *   as: optSource.inverse.as,
+ * })
+ */
+export const HasMany = makeAssociationDecorator('hasMany', {
+
+  getSymmetricalAssociation: getSymmetricalHasAssociation,
+});
+
+/*
+ * A.BelongsToMany(B, optSource = {
+ *   // common
+ *   hooks: boolean,
+ *   scope: string,
+ *   timestamps: boolean,
+ *   onDelete: string,
+ *   onUpdate: string,
+ *   constraints: boolean,
+ *   through: string | object,
+ *
+ *   // to invert
+ *   foreignKey: string,
+ *   otherKey: string,
+ *
+ *   // Only first side
+ *   as: string,
+ *
+ *   // Added by framework
+ *   inverse: {
+ *     as: string,
+ *   },
+ * })
+ *
+ * - Creates intermediate table
+ *
+ * Inverse Association:
+ * - B.BelongsToMany(A, {
+ *   ...common,
+ *   otherKey: optSource.foreignKey,
+ *   foreignKey: optSource.otherKey,
+ *   as: optSource.inverse.as,
+ * })
+ */
+export const BelongsToMany = makeAssociationDecorator('belongsToMany', {
+
+  getSymmetricalAssociation(sourceParams) {
+
+    const inverse = sourceParams.inverse;
+
+    // delete "inverse" extra property from sourceParams as it is not accepted by sequelize
+    delete sourceParams.inverse;
+
+    // inverse is null, user does not want to add inverse association.
+    if (inverse == null) {
+      return null;
+    }
+
+    if (typeof inverse !== 'object' && typeof inverse !== 'string') {
+      throw new Error('@BelongsTo "inverse" property must be an object or string');
+    }
+
+    // copy sourceParams for inverse params and override them with the contents of "inverse"
+    const inverseParams = { ...sourceParams };
+
+    // invert keys
+    inverseParams.foreignKey = sourceParams.otherKey;
+    inverseParams.otherKey = sourceParams.foreignKey;
+
+    // as is optional in sequelize, delete the one in inverseParam before assigning overrides
+    // just in case the override does not specify it.
+    delete inverseParams.as;
+
+    // override using the contents of sourceParams.inverse
+    if (typeof inverse === 'string') {
+      inverseParams.as = inverse;
+    } else {
+      Object.assign(inverseParams, inverse);
+    }
+
+    return {
+      type: 'belongsToMany',
+      options: inverseParams,
+    };
+  },
+});
 
 export { Attribute, Attributes } from 'sequelize-decorators';
 

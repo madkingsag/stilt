@@ -76,7 +76,7 @@ function loadModels(modelsDir) {
     if (meta && meta.relationships) {
       for (const relationship of meta.relationships) {
         // eslint-disable-next-line prefer-spread
-        model[relationship.name].apply(model, relationship.args);
+        model[relationship.type].apply(model, relationship.parameters);
       }
     }
   }
