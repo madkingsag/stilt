@@ -141,7 +141,7 @@ const BelongsTo = makeAssociationDecorator('belongsTo', {
     }
 
     // copy sourceParams for inverse params and override them with the contents of "inverse"
-    const inverseOptions = { ...sourceParams };
+    const inverseOptions = Object.assign({}, sourceParams);
 
     // as is optional in sequelize, delete the one in inverseParam before assigning overrides
     // just in case the override does not specify it.
@@ -212,7 +212,7 @@ function getSymmetricalHasAssociation(sourceParams) {
   }
 
   // copy sourceParams for inverse params and override them with the contents of "inverse"
-  const inverseOptions = { ...sourceParams };
+  const inverseOptions = Object.assign({}, sourceParams);
 
   // as is optional in sequelize, delete the one in inverseParam before assigning overrides
   // just in case the override does not specify it.
@@ -330,7 +330,7 @@ const BelongsToMany = makeAssociationDecorator('belongsToMany', {
     }
 
     // copy sourceParams for inverse params and override them with the contents of "inverse"
-    const inverseParams = { ...sourceParams };
+    const inverseParams = Object.assign({}, sourceParams);
 
     // invert keys
     inverseParams.foreignKey = sourceParams.otherKey;
