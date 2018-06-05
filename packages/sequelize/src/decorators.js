@@ -22,7 +22,7 @@ function getSetMeta(target): DbMetaStruct {
   return target[METADATA];
 }
 
-export function getDbMeta(target): ?DbMetaStruct {
+function getDbMeta(target): ?DbMetaStruct {
   return target[METADATA];
 }
 
@@ -114,7 +114,7 @@ function makeAssociationDecorator(associationType, options) {
  *   scope: optSource.inverse.scope,
  * })
  */
-export const BelongsTo = makeAssociationDecorator('belongsTo', {
+const BelongsTo = makeAssociationDecorator('belongsTo', {
 
   getSymmetricalAssociation(sourceParams) {
 
@@ -190,7 +190,7 @@ export const BelongsTo = makeAssociationDecorator('belongsTo', {
  *   as: optSource.inverse.as,
  * })
  */
-export const HasOne = makeAssociationDecorator('hasOne', {
+const HasOne = makeAssociationDecorator('hasOne', {
 
   getSymmetricalAssociation: getSymmetricalHasAssociation,
 });
@@ -272,7 +272,7 @@ function getSymmetricalHasAssociation(sourceParams) {
  *   as: optSource.inverse.as,
  * })
  */
-export const HasMany = makeAssociationDecorator('hasMany', {
+const HasMany = makeAssociationDecorator('hasMany', {
 
   getSymmetricalAssociation: getSymmetricalHasAssociation,
 });
@@ -311,7 +311,7 @@ export const HasMany = makeAssociationDecorator('hasMany', {
  *   as: optSource.inverse.as,
  * })
  */
-export const BelongsToMany = makeAssociationDecorator('belongsToMany', {
+const BelongsToMany = makeAssociationDecorator('belongsToMany', {
 
   getSymmetricalAssociation(sourceParams) {
 
@@ -354,9 +354,7 @@ export const BelongsToMany = makeAssociationDecorator('belongsToMany', {
   },
 });
 
-export { Attribute, Attributes } from 'sequelize-decorators';
-
-export function Options(params) {
+function Options(params) {
 
   if (!hasOwnProperty(params, 'sequelize')) {
     Object.defineProperty(params, 'sequelize', {
@@ -372,3 +370,25 @@ export function Options(params) {
 
   return optionsDecorator(params);
 }
+
+export {
+  Attribute,
+  Attribute as attribute,
+  Attributes,
+  Attributes as attributes,
+} from 'sequelize-decorators';
+
+export const belongsTo = BelongsTo;
+export const belongsToMany = BelongsToMany;
+export const hasOne = HasOne;
+export const hasMany = HasMany;
+export const options = Options;
+
+export {
+  getDbMeta,
+  BelongsTo,
+  BelongsToMany,
+  HasOne,
+  HasMany,
+  Options,
+};

@@ -6,7 +6,28 @@ import Sequelize from 'sequelize';
 import requireAll from 'require-all';
 import { getDbMeta, Options } from './decorators';
 
-export { BelongsTo, BelongsToMany, HasMany, Attribute, Attributes, Options } from './decorators';
+export {
+  BelongsTo,
+  belongsTo,
+
+  BelongsToMany,
+  belongsToMany,
+
+  HasMany,
+  hasMany,
+
+  Attribute,
+  attribute,
+
+  Attributes,
+  attributes,
+
+  Options,
+  options,
+
+  HasOne,
+  hasOne,
+} from './decorators';
 
 type Config = {
   databaseUri: string,
