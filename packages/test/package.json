@@ -1,6 +1,6 @@
 {
   "name": "@stilt/test",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "@stilt/core": "^0.1.1",
-    "@stilt/graphql": "^0.1.1",
+    "@stilt/graphql": "^0.1.2",
     "@stilt/http": "^0.1.1",
     "@stilt/jwt-sessions": "^0.1.1",
     "@stilt/rest": "^0.1.1",
