@@ -19,7 +19,7 @@ export default class StiltGraphQl {
     this._config = config;
   }
 
-  initPlugin(app) {
+  postInitPlugin(app) {
     // this.logger = app.makeLogger('graphql');
 
     this.server = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
