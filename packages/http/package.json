@@ -9,6 +9,7 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "async-hooks-storage": "^1.0.1",
     "chalk": "^2.4.1",
     "ip": "^1.1.5",
     "koa": "^2.5.1",

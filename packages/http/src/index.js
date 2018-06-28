@@ -4,6 +4,7 @@ import Koa from 'koa';
 import Router from 'koa-better-router';
 import ip from 'ip';
 import chalk from 'chalk';
+import { AsyncHookMap } from 'async-hooks-storage';
 
 export default class StiltHttp {
 
@@ -16,17 +17,34 @@ export default class StiltHttp {
 
     this.koa = new Koa();
     this.router = Router().loadMethods();
+
+    this._requestMap = new AsyncHookMap();
   }
 
-  initPlugin(app) {
+  preInitPlugin(app) {
     this.logger = app.makeLogger('http');
 
+    this.koa.use((ctx, next) => {
+      this._requestMap.set('context', ctx);
+
+      return next();
+    });
+  }
+
+  postInitPlugin() {
     this.koa.use(this.router.middleware());
 
     // TODO only listen plugin if a route is registered
     this.koa.listen(this.port, () => {
       this._printServerStarted(this.port);
     });
+  }
+
+  /**
+   * @returns the context of the request that is currently being processed. Null if no request is being processed.
+   */
+  getCurrentContext() {
+    return this._requestMap.get('context');
   }
 
   /**
