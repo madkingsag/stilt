@@ -1,10 +1,13 @@
 {
   "name": "@stilt/http",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",

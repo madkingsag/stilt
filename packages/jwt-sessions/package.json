@@ -1,10 +1,13 @@
 {
   "name": "@stilt/jwt-sessions",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Add JWT sessions to @stilt/http",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",
@@ -23,7 +26,7 @@
   },
   "homepage": "https://github.com/madkingsag/stilt#readme",
   "dependencies": {
-    "@stilt/http": "^0.1.0",
+    "@stilt/http": "^0.1.1",
     "async-hooks-storage": "^1.0.1",
     "jsonwebtoken": "^8.3.0",
     "koa-jwt": "^3.3.2",

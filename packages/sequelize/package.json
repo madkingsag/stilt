@@ -1,10 +1,13 @@
 {
   "name": "@stilt/sequelize",
-  "version": "0.0.3",
+  "version": "0.1.1",
   "description": "Sequelize Wrapper for Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
@@ -12,8 +15,8 @@
     "sequelize": "^4.37.10"
   },
   "dependencies": {
-    "@stilt/core": "^0.0.1",
-    "@stilt/util": "^0.0.1",
+    "@stilt/core": "^0.1.1",
+    "@stilt/util": "^0.1.1",
     "require-all": "^2.2.0",
     "sequelize-decorators": "^1.0.2"
   },
