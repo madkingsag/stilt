@@ -6,3 +6,4 @@
     - wrap methods using `@withTransaction` (creates a transaction if one does not exist).
     - current transaction available using `@withTransaction.current`.
 - CLI method to reset Database (with "are you sure" prompt printing `NODE_ENV`)
+- Throw if two tables share the same name.
