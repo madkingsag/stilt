@@ -1,6 +1,7 @@
 // @flow
 
 import { set as setProperty } from 'lodash';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 
 // import deepFreeze from 'deep-freeze-strict';
 
@@ -66,7 +67,7 @@ export function classToResolvers(Class: Function | Object): Object {
   meta.forEach((options: ResolverBuilderOptions, resolverPath: string) => {
 
     // $FlowBug
-    const method = normalizeFunction(Class, Class[options.method]);
+    const method = wrapControllerWithInjectors(normalizeFunction(Class, Class[options.method]));
 
     setProperty(resolvers, resolverPath, method);
   });

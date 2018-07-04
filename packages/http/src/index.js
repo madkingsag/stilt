@@ -5,6 +5,9 @@ import Router from 'koa-better-router';
 import ip from 'ip';
 import chalk from 'chalk';
 import { AsyncHookMap } from 'async-hooks-storage';
+import { wrapControllerWithInjectors } from './controllerInjectors';
+
+export { makeControllerInjector } from './controllerInjectors';
 
 export default class StiltHttp {
 
@@ -55,7 +58,7 @@ export default class StiltHttp {
    * @param callback The method handling the route.
    */
   registerRoute(method, path, callback) {
-    const asyncCallback = asyncToRestify(callback);
+    const asyncCallback = wrapControllerWithInjectors(asyncToRestify(callback));
 
     this.router[method](path, asyncCallback);
   }
