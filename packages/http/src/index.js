@@ -58,7 +58,7 @@ export default class StiltHttp {
    * @param callback The method handling the route.
    */
   registerRoute(method, path, callback) {
-    const asyncCallback = wrapControllerWithInjectors(asyncToRestify(callback));
+    const asyncCallback = asyncToKoa(callback);
 
     this.router[method](path, asyncCallback);
   }
@@ -147,10 +147,11 @@ function printTable(lines) {
 
 // TODO support returned streams (ctx.body = someHTTPStream.on('error', ctx.onerror).pipe(PassThrough()))
 // TODO handle errors
-function asyncToRestify(asyncFunction) {
+function asyncToKoa(asyncFunction) {
 
-  return function RestifiedRoute(ctx) {
-    const result = asyncFunction(ctx);
+  return function asyncRoute(ctx) {
+    // eslint-disable-next-line no-invalid-this
+    const result = asyncFunction.call(this, ctx);
 
     if (result && result.then) {
       return result.then(body => sendResponse(ctx, body));

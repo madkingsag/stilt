@@ -33,9 +33,7 @@ export function makeControllerInjector(callback: Function, defaultKey: string): 
   };
 }
 
-export function wrapControllerWithInjectors(Class: Function, methodName: string): Function {
-
-  const method = Class[methodName];
+export function wrapControllerWithInjectors(Class: Function, methodName: string, method: Function): Function {
 
   const injectorsMetaMap = Class[CONTROLLER_INJECTORS];
   if (!injectorsMetaMap) {

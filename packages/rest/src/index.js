@@ -1,6 +1,7 @@
 // @flow
 
 import StiltHttp from '@stilt/http';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 import requireAll from 'require-all';
 import { getRoutingMetadata } from './HttpMethodsDecorators';
 
@@ -31,19 +32,24 @@ export default class StiltRest {
     });
 
     for (const controllerModule of Object.values(controllers)) {
-      const controller = controllerModule.default;
+      const controllerClass = controllerModule.default;
 
-      const methodNames = Reflect.ownKeys(controller);
+      const methodNames = Reflect.ownKeys(controllerClass);
 
       for (const methodName of methodNames) {
-        const methodHandler = controller[methodName];
+        const methodHandler = controllerClass[methodName];
 
         const routingMeta = getRoutingMetadata(methodHandler);
         if (!routingMeta) {
           continue;
         }
 
-        const routeHandler = methodHandler.bind(controller);
+        const routeHandler = wrapControllerWithInjectors(
+          controllerClass,
+          methodName,
+          methodHandler.bind(controllerClass),
+        );
+
         for (const routeMeta of routingMeta) {
           this.server.registerRoute(routeMeta.method, routeMeta.path, routeHandler);
         }

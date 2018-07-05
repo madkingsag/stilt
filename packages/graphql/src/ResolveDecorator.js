@@ -67,7 +67,11 @@ export function classToResolvers(Class: Function | Object): Object {
   meta.forEach((options: ResolverBuilderOptions, resolverPath: string) => {
 
     // $FlowBug
-    const method = wrapControllerWithInjectors(normalizeFunction(Class, Class[options.method]));
+    const method = wrapControllerWithInjectors(
+      Class,
+      options.method,
+      normalizeFunction(Class, Class[options.method]),
+    );
 
     setProperty(resolvers, resolverPath, method);
   });
@@ -79,6 +83,8 @@ function normalizeFunction(Class: Function, method: Function): GraphQlFunction {
 
   return function resolver(parent, parameters) {
 
+    // TODO what if "parameters" already contains key "parent" ?
+    // TODO "parent" should be named based on name of parent type.
     parameters.parent = parent;
 
     return method.call(Class, parameters);
