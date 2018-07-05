@@ -20,7 +20,7 @@ function getSetMeta(Class: Function, methodName: string): ResolverOptions {
   return Class[Meta].get(methodName, {});
 }
 
-export function resolve(schemaPath: string): Function {
+function resolve(schemaPath: string): Function {
   return function decorate(Class, methodName) {
     if (Class.constructor !== Function) {
       throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
@@ -32,7 +32,7 @@ export function resolve(schemaPath: string): Function {
   };
 }
 
-export function withGraphqlQuery(paramNum: number): Function {
+function withGraphqlQuery(paramNum: number): Function {
 
   return function decorate(Class, methodName) {
 
@@ -110,3 +110,11 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
     return method.apply(Class, methodParameters);
   };
 }
+
+export {
+  resolve,
+  withGraphqlQuery,
+
+  resolve as Resolve,
+  withGraphqlQuery as WithGraphqlQuery,
+};
