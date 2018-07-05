@@ -6,7 +6,7 @@ import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjector
 const Meta = Symbol('graphql-meta');
 
 type ResolverClassMetadata = Map<string, ResolverOptions>;
-type ResolverOptions = { schemaKey: string, queryAsParameters?: number };
+type ResolverOptions = { schemaKey: string, queryAsParameters?: number, parentKey?: string };
 
 function getSetMeta(Class: Function, methodName: string): ResolverOptions {
   if (!Class[Meta]) {
@@ -20,7 +20,7 @@ function getSetMeta(Class: Function, methodName: string): ResolverOptions {
   return Class[Meta].get(methodName, {});
 }
 
-function resolve(schemaPath: string): Function {
+function resolve(schemaPath: string, opts?: { parentKey?: string }): Function {
   return function decorate(Class, methodName) {
     if (Class.constructor !== Function) {
       throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
@@ -29,6 +29,10 @@ function resolve(schemaPath: string): Function {
     const resolverOptions = getSetMeta(Class, methodName);
 
     resolverOptions.schemaKey = schemaPath;
+
+    if (opts && opts.parentKey) {
+      resolverOptions.parentKey = opts.parentKey;
+    }
   };
 }
 
@@ -98,10 +102,12 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
 
   return function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
-    graphqlQueryParameters.parent = parent;
+    if (parent != null) {
+      const parentName = options.parentKey || lowerFirstLetter(graphqlQuery.parentType);
 
-    // TODO what if "parameters" already contains key "parent" ?
-    // TODO "parent" should be named based on name of parent type.
+      graphqlQueryParameters[parentName] = parent;
+    }
+
     const methodParameters = [graphqlQueryParameters];
     if (options.queryAsParameters !== void 0) {
       methodParameters[options.queryAsParameters] = { query: graphqlQuery };
@@ -109,6 +115,10 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
 
     return method.apply(Class, methodParameters);
   };
+}
+
+function lowerFirstLetter(string) {
+  return string.charAt(0).toLowerCase() + string.slice(1);
 }
 
 export {
