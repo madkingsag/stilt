@@ -66,11 +66,13 @@ export function classToResolvers(Class: Function | Object): Object {
 
   meta.forEach((options: ResolverBuilderOptions, resolverPath: string) => {
 
-    // $FlowBug
-    const method = wrapControllerWithInjectors(
+    const method = normalizeFunction(
       Class,
-      options.method,
-      normalizeFunction(Class, Class[options.method]),
+      wrapControllerWithInjectors(
+        Class,
+        options.method,
+        Class[options.method],
+      ),
     );
 
     setProperty(resolvers, resolverPath, method);
