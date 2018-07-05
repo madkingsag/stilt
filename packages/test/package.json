@@ -1,6 +1,6 @@
 {
   "name": "@stilt/test",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -10,12 +10,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@stilt/core": "^0.1.1",
-    "@stilt/graphql": "^0.2.1",
-    "@stilt/http": "^0.2.1",
-    "@stilt/jwt-sessions": "^0.2.1",
-    "@stilt/rest": "^0.2.1",
-    "@stilt/sequelize": "^0.2.0",
+    "@stilt/core": "^0.2.2",
+    "@stilt/graphql": "^0.2.2",
+    "@stilt/http": "^0.2.2",
+    "@stilt/jwt-sessions": "^0.2.2",
+    "@stilt/rest": "^0.2.2",
+    "@stilt/sequelize": "^0.2.2",
     "pg": "^7.4.3",
     "sequelize": "^4.37.10"
   }
