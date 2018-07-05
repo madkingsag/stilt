@@ -103,7 +103,7 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
   return function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
     if (parent != null) {
-      const parentName = options.parentKey || lowerFirstLetter(graphqlQuery.parentType);
+      const parentName = options.parentKey || lowerFirstLetter(graphqlQuery.parentType.name);
 
       graphqlQueryParameters[parentName] = parent;
     }
