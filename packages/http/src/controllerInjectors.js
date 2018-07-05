@@ -46,14 +46,17 @@ export function wrapControllerWithInjectors(Class: Function, methodName: string,
   }
 
   const existingMethod = Class[methodName];
-  return function withInjectedParameters(...methodParameters) {
+  return async function withInjectedParameters(...methodParameters) {
 
+    const promises = [];
     for (let i = 0; i < injectorsMeta.length; i++) {
-      injectParameter(methodParameters, injectorsMeta[i]);
+      promises.push(injectParameter(methodParameters, injectorsMeta[i], Class, methodName));
     }
 
+    await Promise.all(promises);
+
     // eslint-disable-next-line no-invalid-this
-    return existingMethod.apply(this, methodParameters, Class, methodName);
+    return existingMethod.apply(this, methodParameters);
   };
 }
 

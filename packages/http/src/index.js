@@ -5,7 +5,6 @@ import Router from 'koa-better-router';
 import ip from 'ip';
 import chalk from 'chalk';
 import { AsyncHookMap } from 'async-hooks-storage';
-import { wrapControllerWithInjectors } from './controllerInjectors';
 
 export { makeControllerInjector } from './controllerInjectors';
 
