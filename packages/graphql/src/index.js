@@ -9,7 +9,7 @@ import mount from 'koa-mount';
 import graphqlHTTP from 'koa-graphql';
 import { classToResolvers } from './ResolveDecorator';
 
-export { resolve } from './ResolveDecorator';
+export { resolve, withGraphqlQuery } from './ResolveDecorator';
 
 export default class StiltGraphQl {
 

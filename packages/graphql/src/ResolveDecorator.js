@@ -3,19 +3,21 @@
 import { set as setProperty } from 'lodash';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 
-// import deepFreeze from 'deep-freeze-strict';
-
 const Meta = Symbol('graphql-meta');
 
-export type ResolverBuilderOptions = { method: string };
-type MetaStruct = Map<string, ResolverBuilderOptions>;
+type ResolverClassMetadata = Map<string, ResolverOptions>;
+type ResolverOptions = { schemaKey: string, queryAsParameters?: number };
 
-function getSetMeta(func: Function): MetaStruct {
-  if (!func[Meta]) {
-    func[Meta] = new Map();
+function getSetMeta(Class: Function, methodName: string): ResolverOptions {
+  if (!Class[Meta]) {
+    Class[Meta] = new Map();
   }
 
-  return func[Meta];
+  if (!Class[Meta].has(methodName)) {
+    Class[Meta].set(methodName, {});
+  }
+
+  return Class[Meta].get(methodName, {});
 }
 
 export function resolve(schemaPath: string): Function {
@@ -24,25 +26,35 @@ export function resolve(schemaPath: string): Function {
       throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
     }
 
-    const routingMetadata = getSetMeta(Class);
+    const resolverOptions = getSetMeta(Class, methodName);
 
-    if (routingMetadata.has(schemaPath)) {
-      throw new Error(`GraphQL endpoint ${schemaPath} has already been defined on method ${Class.constructor.name}#${routingMetadata.get(schemaPath).method}.`);
+    resolverOptions.schemaKey = schemaPath;
+  };
+}
+
+export function withGraphqlQuery(paramNum: number): Function {
+
+  return function decorate(Class, methodName) {
+
+    if (Class.constructor !== Function) {
+      throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
     }
 
-    routingMetadata.set(schemaPath, { method: methodName });
+    const resolverOptions = getSetMeta(Class, methodName);
+
+    resolverOptions.queryAsParameters = paramNum;
   };
 }
 
 /**
- * Returns the routing metadata attached to a function
+ * Returns the resolver metadata attached to a function
  *
  * Designed for internal use.
  *
  * @param func The function on which the metadata has been attached
  * @return {RoutingMetadata} The routing metadata
  */
-function getRoutingMetadata(func: Function): ?MetaStruct {
+function getResolverMetadata(func: Function): ?ResolverClassMetadata {
   if (func == null || !func[Meta]) {
     return null;
   }
@@ -57,38 +69,44 @@ export function classToResolvers(Class: Function | Object): Object {
     return Class;
   }
 
-  const meta: ?MetaStruct = getRoutingMetadata(Class);
+  const meta: ?ResolverClassMetadata = getResolverMetadata(Class);
   if (!meta) {
     return Class;
   }
 
   const resolvers = {};
 
-  meta.forEach((options: ResolverBuilderOptions, resolverPath: string) => {
+  meta.forEach((options: ResolverOptions, methodName: string) => {
 
     const method = normalizeFunction(
       Class,
       wrapControllerWithInjectors(
         Class,
-        options.method,
-        Class[options.method],
+        methodName,
+        Class[methodName],
       ),
+      options,
     );
 
-    setProperty(resolvers, resolverPath, method);
+    setProperty(resolvers, options.schemaKey, method);
   });
 
   return resolvers;
 }
 
-function normalizeFunction(Class: Function, method: Function): GraphQlFunction {
+function normalizeFunction(Class: Function, method: Function, options: ResolverOptions): Function {
 
-  return function resolver(parent, parameters) {
+  return function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
+
+    graphqlQueryParameters.parent = parent;
 
     // TODO what if "parameters" already contains key "parent" ?
     // TODO "parent" should be named based on name of parent type.
-    parameters.parent = parent;
+    const methodParameters = [graphqlQueryParameters];
+    if (options.queryAsParameters !== void 0) {
+      methodParameters[options.queryAsParameters] = { query: graphqlQuery };
+    }
 
-    return method.call(Class, parameters);
+    return method.apply(Class, methodParameters);
   };
 }
