@@ -1,6 +1,6 @@
 {
   "name": "@stilt/http",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "scripts": {
@@ -12,11 +12,11 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@stilt/util": "^0.2.0",
     "async-hooks-storage": "^1.0.1",
     "chalk": "^2.4.1",
     "ip": "^1.1.5",
     "koa": "^2.5.1",
-    "koa-better-router": "^2.1.1",
-    "@stilt/util": "^0.1.1"
+    "koa-better-router": "^2.1.1"
   }
 }
