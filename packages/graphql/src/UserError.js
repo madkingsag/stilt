@@ -14,11 +14,12 @@ export class UserError extends Error {
     this[IsUserError] = true;
   }
 
-  withCode(code) {
+  withCode(code: string): UserError {
     this._code = code;
+    return this;
   }
 
-  get code() {
+  get code(): string {
     return this._code;
   }
 
