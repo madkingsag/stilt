@@ -115,7 +115,7 @@ export function classToResolvers(Class: Function | Object): Object {
 
 function normalizeFunction(Class: Function, method: Function, options: ResolverOptions): Function {
 
-  return function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
+  return async function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
     if (parent != null) {
       const parentName = options.parentKey || lowerFirstLetter(graphqlQuery.parentType.name);
@@ -132,7 +132,7 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
     let resultError;
 
     try {
-      resultNode = method.apply(Class, methodParameters);
+      resultNode = await method.apply(Class, methodParameters);
     } catch (e) {
       resultError = e;
     }
