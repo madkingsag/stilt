@@ -17,35 +17,8 @@
 
 ## Error Management
 
-- Expose GraphQLError & IsUserError
-- Require that those classes have a .toJSON() method
-- (ensure GraphQLError has a .toJSON)
-- 2 modes: Errors as part of schema (root.data.query.error) or Errors as part of root.errors
-    - mode root.errors: No special action
-    - mode root.data.query.error: Add post resolver and require that resolvers which can throw user error are
-      annotated with `@ThrowsUserErrors` (`@throwsUserErrors`)
-    ```javascript
-     function postResolve(error, node) {
-
-       if (!error) {
-         return {
-           error: null,
-           node,
-         };
-       }
-
-       if (!error[IsUserError]) {
-         throw error;
-       }
-
-       return {
-         error: error.toJSON(),
-         node,
-       };
-     },
-    ```
-    - Document how error handling works
-    - Wrap postResolver to transform error.
+- Expose GraphQLError's UserError as "DeveloperError" (which goes to global errors instead of schema error).
+- In development, thowing a UserError in a method not annotated with @throwsUserErrors should print an error.
 
 ## `Pre-resolve`, `post-resolve`
 

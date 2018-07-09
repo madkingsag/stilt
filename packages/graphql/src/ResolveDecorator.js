@@ -6,7 +6,12 @@ import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjector
 const Meta = Symbol('graphql-meta');
 
 type ResolverClassMetadata = Map<string, ResolverOptions>;
-type ResolverOptions = { schemaKey: string, queryAsParameters?: number, parentKey?: string };
+type ResolverOptions = {
+  schemaKey: string,
+  queryAsParameters?: number,
+  parentKey?: string,
+  postResolvers?: Array<Function>,
+};
 
 function getSetMeta(Class: Function, methodName: string): ResolverOptions {
   if (!Class[Meta]) {
@@ -48,6 +53,16 @@ function withGraphqlQuery(paramNum: number): Function {
 
     resolverOptions.queryAsParameters = paramNum;
   };
+}
+
+// TODO don't expose addPostResolver yet, need research on how to add hooks to this API.
+export function addPostResolver(Class: Function, methodName: string, callback: (?Error, ?mixed) => mixed) {
+
+  const resolverOptions = getSetMeta(Class, methodName);
+
+  resolverOptions.postResolvers = resolverOptions.postResolvers || [];
+
+  resolverOptions.postResolvers.push(callback);
 }
 
 /**
@@ -113,8 +128,37 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
       methodParameters[options.queryAsParameters] = { query: graphqlQuery };
     }
 
-    return method.apply(Class, methodParameters);
+    let resultNode;
+    let resultError;
+
+    try {
+      resultNode = method.apply(Class, methodParameters);
+    } catch (e) {
+      resultError = e;
+    }
+
+    return runPostResolvers(resultError, resultNode, options.postResolvers);
   };
+}
+
+function runPostResolvers(err, value, resolvers) {
+
+  if (resolvers) {
+    for (const resolver of resolvers) {
+      try {
+        value = resolver(err, value);
+        err = null;
+      } catch (e) {
+        err = e;
+      }
+    }
+  }
+
+  if (err) {
+    throw err;
+  }
+
+  return value;
 }
 
 function lowerFirstLetter(string) {
@@ -124,7 +168,4 @@ function lowerFirstLetter(string) {
 export {
   resolve,
   withGraphqlQuery,
-
-  resolve as Resolve,
-  withGraphqlQuery as WithGraphqlQuery,
 };
