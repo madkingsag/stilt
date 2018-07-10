@@ -15,11 +15,52 @@ Each of them should be handled differently:
 
 As those errors are unexpected, the developer of the schema do not need to handle those themselves. This framework will catch them, log them, and send an `Internal Error` error to the client.
 
-### Client Developer Errors
+### Developer Errors
 
-Those errors are usually caused by misusing the API. As such, the GraphQL schema should be extremely clear on what input it expected.
+Those errors are the result of a developer misusing the API (eg. sending the wrong input type). As such, the GraphQL schema should be extremely clear on what input it expected.
 
 The best way to respond to unexpected inputs is to define stricter types and use them as inputs.
+
+If the GraphQL schema is not flexible enough for your needs, you can also throw instances of `DevError` to notify to the developer that they are misusing the API:
+
+```javascript
+import { DevError } from '@stilt/graphql';
+
+class ProductResolver {
+
+  @resolve('Query.products')
+  getProducts({ pagination }) {
+    if (pagination.first && pagination.last) {
+      throw new DevError('Using both pagination.first and pagination.last is not supported');
+    }
+  }
+}
+```
+
+*Note*: DevErrors are handled by [`graphql-errors`](https://github.com/kadirahq/graphql-errors) (in which they are called UserErrors. In this framework, UserErrors are part of the schema while DevErrors are part of the top level `errors` object).
+
+#### Custom `UserError` class
+
+If for any reason you need to define your own `UserError` class, you can simply tag the instances of your error with the `IsDevError` Symbol:
+
+
+```javascript
+// MyDevError.js
+
+import { IsDevError } from '@stilt/graphql';
+
+export default class MyDevError extends Error {
+
+  constructor(title) {
+    super(title);
+
+    // mark this instance as being a dev error.
+    // if this is not set, the error will be considered to be an unexpected error and an "internal error"
+    // response will be sent to the client.
+    this[IsDevError] = true;
+  }
+}
+```
 
 ### User Errors
 

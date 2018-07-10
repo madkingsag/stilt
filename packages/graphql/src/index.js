@@ -25,6 +25,11 @@ export {
   IsUserError,
 } from './UserError';
 
+export {
+  UserError as DevError,
+  IsUserError as IsDevError,
+} from 'graphql-errors';
+
 export default class StiltGraphQl {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/graphql');
