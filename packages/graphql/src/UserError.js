@@ -41,16 +41,16 @@ type Descriptor = {
   set: Function,
 };
 
-function handleUserErrors(error, value) {
+function handleUserErrors(error, node) {
 
   if (!error) {
-    return { error: null, value };
+    return { error: null, node };
   }
 
   if (error[IsUserError]) {
     return {
       error: error.toJSON(),
-      value: null,
+      node: null,
     };
   }
 
