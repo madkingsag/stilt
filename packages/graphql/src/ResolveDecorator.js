@@ -115,10 +115,11 @@ export function classToResolvers(Class: Function | Object): Object {
 
 function normalizeFunction(Class: Function, method: Function, options: ResolverOptions): Function {
 
+  const parentName = options.parentKey || lowerFirstLetter(nthLastItem(options.schemaKey.split('.'), 1));
+
   return async function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
     if (parent != null) {
-      const parentName = options.parentKey || lowerFirstLetter(graphqlQuery.parentType.name);
 
       graphqlQueryParameters[parentName] = parent;
     }
@@ -159,6 +160,10 @@ function runPostResolvers(err, value, resolvers) {
   }
 
   return value;
+}
+
+function nthLastItem(arr, num = 0) {
+  return arr[arr.length - (num + 1)];
 }
 
 function lowerFirstLetter(string) {
