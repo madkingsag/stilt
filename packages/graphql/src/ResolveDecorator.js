@@ -90,7 +90,7 @@ export function classToResolvers(Class: Function | Object): Object {
 
   const meta: ?ResolverClassMetadata = getResolverMetadata(Class);
   if (!meta) {
-    return Class;
+    return {};
   }
 
   const resolvers = {};
