@@ -119,8 +119,14 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
 
   return async function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
-    if (parent != null) {
+    // Node.__resolveType does not have parameters.
+    if (graphqlQuery === void 0) {
+      graphqlQuery = koaContext;
+      koaContext = graphqlQueryParameters;
+      graphqlQueryParameters = {};
+    }
 
+    if (parent != null) {
       graphqlQueryParameters[parentName] = parent;
     }
 
