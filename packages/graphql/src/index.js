@@ -59,6 +59,7 @@ export default class StiltGraphQl {
     const schema = makeExecutableSchema({
       typeDefs: graphqlTypes,
       resolvers: graphqlResolvers,
+      inheritResolversFromInterfaces: true,
     });
 
     maskErrors(schema);
