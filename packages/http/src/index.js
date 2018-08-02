@@ -8,9 +8,15 @@ import { AsyncHookMap } from 'async-hooks-map';
 
 export { makeControllerInjector } from './controllerInjectors';
 
+// for an unknown reason, if I build the map in the constructor,
+// it will be unable to find "root" during request processing.
+const CONTEXT_MAP = new AsyncHookMap();
+CONTEXT_MAP.alias('root');
+
 export default class StiltHttp {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/http');
+  _contextField = Symbol('context');
 
   _declaredEndpoints = [];
 
@@ -19,15 +25,13 @@ export default class StiltHttp {
 
     this.koa = new Koa();
     this.router = Router().loadMethods();
-
-    this._requestMap = new AsyncHookMap();
   }
 
   preInitPlugin(app) {
     this.logger = app.makeLogger('http');
 
     this.koa.use((ctx, next) => {
-      this._requestMap.set('context', ctx);
+      CONTEXT_MAP.closest('root').set(this._contextField, ctx);
 
       return next();
     });
@@ -46,7 +50,7 @@ export default class StiltHttp {
    * @returns the context of the request that is currently being processed. Null if no request is being processed.
    */
   getCurrentContext() {
-    return this._requestMap.get('context');
+    return CONTEXT_MAP.closest('root').get(this._contextField);
   }
 
   /**
