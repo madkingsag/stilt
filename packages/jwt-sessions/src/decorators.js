@@ -1,6 +1,6 @@
 // @flow
 
-import { AsyncHookMap } from 'async-hooks-storage';
+import { AsyncHookMap } from 'async-hooks-map';
 
 const currentInstances = new AsyncHookMap();
 
