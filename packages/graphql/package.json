@@ -1,6 +1,6 @@
 {
   "name": "@stilt/graphql",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "GraphQL Module for Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@stilt/http": "^0.2.3",
+    "@stilt/http": "^0.7.0",
     "graphql": "^0.13.2",
     "graphql-errors": "^2.1.0",
     "graphql-tools": "^3.0.2",
