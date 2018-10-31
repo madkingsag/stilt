@@ -1,6 +1,6 @@
 {
   "name": "@stilt/util",
-  "version": "0.2.2",
+  "version": "0.8.0",
   "description": "Utilitaries used in Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
@@ -10,5 +10,8 @@
     "access": "public"
   },
   "author": "Guylian Cox <guyliancox@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^7.1.3"
+  }
 }

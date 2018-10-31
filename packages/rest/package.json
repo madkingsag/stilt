@@ -1,6 +1,6 @@
 {
   "name": "@stilt/rest",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -12,9 +12,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@stilt/http": "^0.7.1",
+    "@stilt/http": "^0.8.0",
+    "@stilt/util": "^0.8.0",
     "deep-freeze-strict": "^1.1.1",
-    "lodash": "^4.17.10",
-    "require-all": "^2.2.0"
+    "lodash": "^4.17.10"
   }
 }
