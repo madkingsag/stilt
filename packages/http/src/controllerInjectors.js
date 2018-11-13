@@ -4,15 +4,14 @@ import { isPlainObject, hasOwnProperty } from '@stilt/util';
 
 const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
 
-export function makeControllerInjector(callback: Function, defaultKey: string): Function {
+type InjectorFactoryOptions = {
+  dependencies?: { [string]: string | Function },
+  run: (option: Object, dependencies?: Object[]) => { [string]: any },
+};
 
-  if (!defaultKey) {
-    throw new Error('When creating a controller injector, you should specify as which key the value is injected');
-  }
+export function makeControllerInjector({ run: callback, dependencies }: InjectorFactoryOptions): Function {
 
-  return function createConfiguredDecorator(parameterNum: number, options = {}): Function {
-
-    const { key = defaultKey, ...injectableOptions } = options;
+  return function createConfiguredDecorator(parameterNum: number, ...injectableOptions): Function {
 
     return function decorateController(Class, methodName) {
 
@@ -25,32 +24,59 @@ export function makeControllerInjector(callback: Function, defaultKey: string): 
 
       injectorMeta.get(methodName).push({
         parameterNum,
-        key,
         options: injectableOptions,
         valueProvider: callback,
+
+        dependencies,
       });
     };
   };
 }
 
-export function wrapControllerWithInjectors(Class: Function, methodName: string, method: Function): Function {
+function instantiateDependencyTable(stiltApp, table) {
+
+  const promises = [];
+  const resolvedDependencies = Object.create(null);
+
+  for (const [key, value] of Object.entries(table)) {
+    const dependencyPromise = stiltApp.instanciate(value);
+
+    dependencyPromise.then(resolvedDep => {
+      resolvedDependencies[key] = resolvedDep;
+    });
+  }
+
+  return Promise.all(promises).then(() => resolvedDependencies);
+}
+
+export function wrapControllerWithInjectors(Class: Function, methodName: string, method: Function, stiltApp): Function {
 
   const injectorsMetaMap = Class[CONTROLLER_INJECTORS];
-  if (!injectorsMetaMap) {
+  if (!injectorsMetaMap || !injectorsMetaMap.has(methodName)) {
     return method;
   }
 
-  const injectorsMeta: Array = injectorsMetaMap.get(methodName);
-  if (!injectorsMeta) {
-    return method;
-  }
+  const injectorsMetaList: Array = injectorsMetaMap
+    .get(methodName)
+
+    // get the instance of all declared dependencies.
+    .map(injectorMeta => {
+      if (!injectorMeta.dependencies) {
+        return injectorMeta;
+      }
+
+      return {
+        ...injectorMeta,
+        dependenciesInstances: instantiateDependencyTable(stiltApp, injectorMeta.dependencies),
+      };
+    });
 
   const existingMethod = Class[methodName];
   return async function withInjectedParameters(...methodParameters) {
 
     const promises = [];
-    for (let i = 0; i < injectorsMeta.length; i++) {
-      promises.push(injectParameter(methodParameters, injectorsMeta[i], Class, methodName));
+    for (let i = 0; i < injectorsMetaList.length; i++) {
+      promises.push(injectParameter(methodParameters, injectorsMetaList[i], Class, methodName));
     }
 
     await Promise.all(promises);
@@ -62,24 +88,31 @@ export function wrapControllerWithInjectors(Class: Function, methodName: string,
 
 async function injectParameter(methodParameters, injectorMeta, Class, methodName) {
 
-  const { parameterNum, key, options, valueProvider } = injectorMeta;
+  const { parameterNum, options, valueProvider, dependenciesInstances } = injectorMeta;
 
   let parameter = methodParameters[parameterNum];
 
   if (parameter !== void 0 && !isPlainObject(parameter)) {
-    throw new Error(`Trying to inject property ${key} inside parameter ${parameterNum} of method ${Class.name}#${methodName}, but parameter already exists and is not a plain object. This is likely a conflict between two decorators.`);
+    throw new Error(`Trying to inject property inside parameter ${parameterNum} of method ${Class.name}#${methodName}, but parameter already exists and is not a plain object. This is likely a conflict between two decorators.`);
   }
 
   if (parameter === void 0) {
     parameter = Object.create(null);
+    methodParameters[parameterNum] = parameter;
   }
 
-  const injectableValue = await valueProvider(options);
-
-  if (hasOwnProperty(parameter, key)) {
-    throw new Error(`Trying to inject property ${key} inside object parameter ${parameterNum} of method ${Class.name}#${methodName}, but such property already exists is the parameter.`);
+  const injectableValues = await valueProvider(options, await dependenciesInstances);
+  if (!injectableValues) {
+    return;
   }
 
-  parameter[key] = injectableValue;
-  methodParameters[parameterNum] = parameter;
+  if (process.env.NODE_ENV !== 'production') {
+    for (const key of Object.keys(injectableValues)) {
+      if (hasOwnProperty(parameter, key)) {
+        throw new Error(`Trying to inject property ${key} inside object parameter ${parameterNum} of method ${Class.name}#${methodName}, but such property already exists is the parameter.`);
+      }
+    }
+  }
+
+  Object.assign(parameter, injectableValues);
 }
