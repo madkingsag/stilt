@@ -46,6 +46,10 @@ export default class App {
   }
 
   getPlugin(pluginIdentifier) {
+    if (pluginIdentifier.MODULE_IDENTIFIER) {
+      return this.getPlugin(pluginIdentifier.MODULE_IDENTIFIER);
+    }
+
     if (!this._plugins.has(pluginIdentifier)) {
       throw new TypeError(`Plugin with identifier ${String(pluginIdentifier)} has not been registered. Did you forget to register it?`);
     }
