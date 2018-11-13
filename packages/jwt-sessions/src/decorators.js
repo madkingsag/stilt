@@ -18,7 +18,9 @@ function getCurrentSession() {
   return currentJwtModule.getCurrentSession();
 }
 
-const withSession = makeControllerInjector(() => getCurrentSession(), 'session');
+const withSession = makeControllerInjector({
+  run: options => ({ [options.key || 'session']: getCurrentSession() }),
+});
 
 export {
   withSession,
