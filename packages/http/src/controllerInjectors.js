@@ -49,11 +49,16 @@ function instantiateDependencyTable(stiltApp, table) {
   return Promise.all(promises).then(() => resolvedDependencies);
 }
 
-export function wrapControllerWithInjectors(Class: Function, methodName: string, method: Function, stiltApp): Function {
+export function wrapControllerWithInjectors(
+  Class: Function,
+  methodName: string,
+  wrappedMethod: Function,
+  stiltApp
+): Function {
 
   const injectorsMetaMap = Class[CONTROLLER_INJECTORS];
   if (!injectorsMetaMap || !injectorsMetaMap.has(methodName)) {
-    return method;
+    return wrappedMethod;
   }
 
   const injectorsMetaList: Array = injectorsMetaMap
@@ -71,7 +76,6 @@ export function wrapControllerWithInjectors(Class: Function, methodName: string,
       };
     });
 
-  const existingMethod = Class[methodName];
   return async function withInjectedParameters(...methodParameters) {
 
     const promises = [];
@@ -82,7 +86,7 @@ export function wrapControllerWithInjectors(Class: Function, methodName: string,
     await Promise.all(promises);
 
     // eslint-disable-next-line no-invalid-this
-    return existingMethod.apply(this, methodParameters);
+    return wrappedMethod.apply(this, methodParameters);
   };
 }
 
@@ -93,7 +97,8 @@ async function injectParameter(methodParameters, injectorMeta, Class, methodName
   let parameter = methodParameters[parameterNum];
 
   if (parameter !== void 0 && !isPlainObject(parameter)) {
-    throw new Error(`Trying to inject property inside parameter ${parameterNum} of method ${Class.name}#${methodName}, but parameter already exists and is not a plain object. This is likely a conflict between two decorators.`);
+    // TODO: extract getName to @stilt/util
+    throw new Error(`Trying to inject property inside parameter ${parameterNum} of method ${Class.name || Class.constructor.name}#${methodName}, but parameter already exists and is not a plain object. This is likely a conflict between two decorators.`);
   }
 
   if (parameter === void 0) {
@@ -109,7 +114,7 @@ async function injectParameter(methodParameters, injectorMeta, Class, methodName
   if (process.env.NODE_ENV !== 'production') {
     for (const key of Object.keys(injectableValues)) {
       if (hasOwnProperty(parameter, key)) {
-        throw new Error(`Trying to inject property ${key} inside object parameter ${parameterNum} of method ${Class.name}#${methodName}, but such property already exists is the parameter.`);
+        throw new Error(`Trying to inject property ${key} inside object parameter ${parameterNum} of method ${Class.name || Class.constructor.name}#${methodName}, but such property already exists is the parameter.`);
       }
     }
   }
