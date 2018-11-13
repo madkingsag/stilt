@@ -3,7 +3,7 @@
 
 import { URL } from 'url';
 import Sequelize from 'sequelize';
-import requireAll from 'require-all';
+import { asyncGlob } from '@stilt/util';
 import { getDbMeta, Options } from './decorators';
 
 export {
@@ -42,10 +42,19 @@ export default class StiltSequelize {
   config: Config;
 
   constructor(config: Config) {
-    this.config = config;
+    this.config = {
+      ...config,
+      namespace: (config.namespace || 'stilt-sequelize'),
+    };
   }
 
   async preInitPlugin(app) {
+    const sequelizeDeferred = Deferred();
+
+    app.registerInjectables({
+      [`${this.config.namespace}:sequelize`]: sequelizeDeferred.promise,
+    });
+
     this.logger = app.makeLogger('sequelize');
     const uri = new URL(this.config.databaseUri);
 
@@ -61,32 +70,31 @@ export default class StiltSequelize {
       },
     );
 
-    const modelDirectory = this.config.models;
+    const modelDirectory = this.config.models || '**/*.entity.js';
 
     Options.currentSequelize = this.sequelize;
-    loadModels(modelDirectory);
+    await loadModels(modelDirectory);
     Options.currentSequelize = null;
 
     await this.sequelize.authenticate();
     await this.sequelize.sync();
 
     this.logger.info('Database Connection Ready');
+
+    sequelizeDeferred.resolve(this.sequelize);
   }
 }
 
-function loadModels(modelsDir) {
+async function loadModels(modelsGlob) {
 
-  const models = requireAll({
-    dirname: modelsDir,
-    filter: /(.+\.jsm?$)/,
-    recursive: true,
-  });
+  const modelFiles = await asyncGlob(modelsGlob);
 
-  for (const [fileName, module] of Object.entries(models)) {
+  for (const fileName of modelFiles) {
+    const module = require(fileName);
     const model = module.default || module;
 
     if (typeof model !== 'function') {
-      throw new Error(`Could not load Sequelize Model in file ${modelsDir}/${fileName}. Make sure a Class is exported`);
+      throw new Error(`Could not load Sequelize Model in file ${fileName}. Make sure a Class is exported`);
     }
 
     if (model.disabled) {
@@ -100,4 +108,14 @@ function loadModels(modelsDir) {
       }
     }
   }
+}
+
+function Deferred() {
+
+  let resolve;
+  const promise = new Promise(_resolve => {
+    resolve = _resolve;
+  });
+
+  return { promise, resolve };
 }

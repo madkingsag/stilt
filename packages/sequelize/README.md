@@ -2,7 +2,7 @@
 
 _Sequelize 4 Adapter for Stilt Framework_
 
-Note: You do not have to use this plugin to use Sequelize with the Stilt framework,  
+Note: You do not have to use this plugin to use Sequelize with the Stilt framework,
 but this will be much more convenient.
 
 ## Install
@@ -20,7 +20,7 @@ import StiltSequelize from '@stilt/sequelize';
 const app = new Stilt();
 
 app.use(new StiltSequelize({
-  models: `${__dirname}/models`,
+  models: `**/*.entity.js`,
   databaseUri: 'postgres://ephys@localhost:5432/myblog',
   debug: false,
 }));

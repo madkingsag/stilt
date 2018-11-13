@@ -7,3 +7,13 @@
     - current transaction available using `@withTransaction.current`.
 - CLI method to reset Database (with "are you sure" prompt printing `NODE_ENV`)
 - Throw if two tables share the same name.
+
+## Hooks
+
+- Decorators for hooks
+    - On static methods
+    - @beforeBulkCreate
+    - @beforeBulkDestroy
+    - @beforeBulkUpdate
+    - ...
+    - http://docs.sequelizejs.com/manual/tutorial/hooks.html
