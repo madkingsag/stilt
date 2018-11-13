@@ -19,7 +19,7 @@ export default class App {
   }
 
   _runPhase(phase) {
-    return [...this._plugins.values()].map(plugin => {
+    const promises = [...this._plugins.values()].map(plugin => {
       const methodName = `${phase}Plugin`;
       if (plugin[methodName]) {
         this.logger.debug(`Running ${phase} on ${getName(plugin)}`);
@@ -28,6 +28,8 @@ export default class App {
 
       return null;
     });
+
+    return Promise.all(promises);
   }
 
   use(plugin) {
