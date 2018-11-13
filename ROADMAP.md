@@ -1,34 +1,9 @@
 # Stilt Roadmap
 
-## @stilt/core
+- use globs for file loaders
+    commands: `glob.sync('**/*.command.js')`
 
-
-
-## @stilt/graphql
-
-Depends on: `@stilt/http`
-
-- Register graphql-koa on server instance
-- schemas
-    - .graphql files
-    - folder containing them configurable VS any .graphql file in the project? (or configurable + recursive)
-        - Advantage of anywhere: Add graphql schema next to Models
-        - By default should be /schema
-        - `@GraphQl` decorator (bind resolver to schema). Can be put on anything (models, controllers, etc)
-
-## @stilt/app
-
-Like https://github.com/AmpersandJS/ampersand-app, a singleton that stores your app for easy access
-
-```javascript
-const app = new App();
-app.use(singleton);
-
-singleton.app
-singleton.context
-singleton.session
-// ...
-```
+---
 
 new backend stack: what to keep
 
