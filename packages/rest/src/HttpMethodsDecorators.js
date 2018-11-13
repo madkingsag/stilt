@@ -2,17 +2,17 @@
 
 import deepFreeze from 'deep-freeze-strict';
 
-const Meta = Symbol('routing-meta');
+const Meta = Symbol('rest-routing-meta');
 
 export type RoutingMetadata = Route[];
 
 export type Route = {
-  method: string,
+  handlerName: string,
+  httpMethod: string,
   path: string,
 };
 
-// TODO store metadata on class
-function getSetMeta(func: Function): RoutingMetadata {
+function getSetMeta(func: Object): RoutingMetadata {
   if (!func[Meta]) {
     func[Meta] = [];
   }
@@ -23,15 +23,12 @@ function getSetMeta(func: Function): RoutingMetadata {
 function makeHttpMethod(httpMethod): Function {
   return function decorator(path) {
     return function decorate(Class, methodName) {
-      if (Class.constructor !== Function) {
-        throw new Error(`Exposing instance methods as REST endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
-      }
 
-      const target = Class[methodName];
-      const routingMetadata = getSetMeta(target);
+      const routingMetadata = getSetMeta(Class);
 
       routingMetadata.push({
-        method: httpMethod,
+        handlerName: methodName,
+        httpMethod,
         path,
       });
     };

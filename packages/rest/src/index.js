@@ -1,8 +1,8 @@
 // @flow
 
 import StiltHttp from '@stilt/http';
+import { asyncGlob } from '@stilt/util';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
-import requireAll from 'require-all';
 import { getRoutingMetadata } from './HttpMethodsDecorators';
 
 export * from './HttpMethodsDecorators';
@@ -11,48 +11,64 @@ export default class StiltRest {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/rest');
 
-  constructor(config) {
-    this._config = config;
+  constructor(config = {}) {
+    this._controllersGlob = config.controllers || '**/*.rest.js';
   }
 
-  initPlugin(app) {
-    // this.logger = app.makeLogger('rest');
+  async initPlugin(app) {
+    this._app = app;
+
+    this.logger = app.makeLogger('rest');
 
     this.server = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
-    this.loadControllers(this._config.controllers);
+    await this._loadControllers();
   }
 
-  loadControllers(controllerDir) {
-    // this.logger.debug(`loading all controllers from ${controllerDir}`);
+  async _loadControllers() {
+    this.logger.debug(`loading all controllers matching ${this._controllersGlob}`);
 
-    const controllers = requireAll({
-      dirname: controllerDir,
-      filter: /\.jsm?$/,
-      recursive: true,
-    });
+    const controllers = await asyncGlob(this._controllersGlob);
 
-    for (const controllerModule of Object.values(controllers)) {
-      const controllerClass = controllerModule.default;
+    const apiClasses = [];
+    for (const controllerPath of Object.values(controllers)) {
+      const controllerModule = require(controllerPath);
+      const controllerClass = controllerModule.default || controllerModule;
 
-      const methodNames = Reflect.ownKeys(controllerClass);
+      if (controllerClass == null || (typeof controllerClass !== 'function' && typeof controllerClass !== 'object')) {
+        continue;
+      }
 
-      for (const methodName of methodNames) {
-        const methodHandler = controllerClass[methodName];
+      apiClasses.push(controllerClass);
+    }
 
-        const routingMeta = getRoutingMetadata(methodHandler);
-        if (!routingMeta) {
-          continue;
+    const apiInstances = await Promise.all(
+      apiClasses.map(resolverClass => {
+        if (typeof resolverClass === 'function') {
+          return this._app.instanciate(resolverClass);
         }
 
+        return null;
+      })
+    );
+
+    const routeHandlers = [...apiClasses, ...apiInstances];
+
+    for (const Class of routeHandlers) {
+      const routingMetaList = getRoutingMetadata(Class);
+      if (!routingMetaList) {
+        continue;
+      }
+
+      for (const routingMeta of routingMetaList) {
+        const classMethod = Class[routingMeta.handlerName];
         const routeHandler = wrapControllerWithInjectors(
-          controllerClass,
-          methodName,
-          methodHandler.bind(controllerClass),
+          Class,
+          classMethod,
+          classMethod.bind(Class),
+          this._app,
         );
 
-        for (const routeMeta of routingMeta) {
-          this.server.registerRoute(routeMeta.method, routeMeta.path, routeHandler);
-        }
+        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, routeHandler);
       }
     }
   }
