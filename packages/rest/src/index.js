@@ -60,16 +60,65 @@ export default class StiltRest {
       }
 
       for (const routingMeta of routingMetaList) {
-        const classMethod = Class[routingMeta.handlerName];
+        const methodName = routingMeta.handlerName;
+        const classMethod = Class[methodName];
         const routeHandler = wrapControllerWithInjectors(
           Class,
-          classMethod,
+          methodName,
           classMethod.bind(Class),
           this._app,
         );
 
-        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, routeHandler);
+        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, wrapError(routeHandler));
       }
     }
   }
+}
+
+function wrapError(callback: Function) {
+
+  return function wrappedError(context) {
+    try {
+      const val = callback();
+
+      if (val == null || !val.then) {
+        return formatSuccess(val, context);
+      }
+
+      return val.then(
+        asyncVal => formatSuccess(asyncVal, context),
+        e => formatError(e, context)
+      );
+    } catch (e) {
+      return formatError(e, context);
+    }
+  };
+}
+
+function formatSuccess(val, context) {
+
+  if (val === void 0) {
+    val = null;
+  }
+
+  if (val && typeof val.pipe === 'function') {
+    return val;
+  }
+
+  return { data: val };
+}
+
+function formatError(err, context) {
+  if (!err.status || err.status === 500) {
+    throw err;
+  }
+
+  context.response.status = err.status;
+
+  return {
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  };
 }
