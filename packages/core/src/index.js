@@ -5,7 +5,6 @@ export default class App {
   _plugins = new Map();
 
   constructor() {
-    setImmediate(() => this.initPlugins());
 
     this.logger = this.makeLogger('core');
   }
@@ -60,6 +59,13 @@ export default class App {
   makeLogger() {
     // TODO use actual logger & namespace it.
     return console;
+  }
+
+  /**
+   * Starts the application.
+   */
+  async init() {
+    await this.initPlugins();
   }
 }
 
