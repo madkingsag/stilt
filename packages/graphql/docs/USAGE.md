@@ -9,11 +9,11 @@ In order to use `@stilt/graphql`, you will first need to install it and its depe
 `npm i @stilt/core @stilt/http @stilt/graphql`
 
 ```javascript
-import App from '@stilt/core';
+import Stilt from '@stilt/core';
 import StiltHttp from '@stilt/http';
 import StiltGraphql from '@stilt/graphql';
 
-const app = new App();
+const app = new Stilt();
 
 // Install HTTP server.
 app.use(new StiltHttp({
@@ -22,9 +22,12 @@ app.use(new StiltHttp({
 
 // Add GraphQL layer
 app.use(new StiltGraphql({
-  schema: `${__dirname}/schema`,
-  resolvers: `${__dirname}/resolvers`,
+  // load any .schema.js or .graphqls file as being part of the schema
+  schemas: '**/*.+(schema.js|graphqls)',
+  resolvers: '**/*.resolver.js',
 }));
+
+app.init();
 ```
 
 ## Options
@@ -33,7 +36,7 @@ The `StiltGraphql` constructor takes multiples options:
 
 ### `schema`
 
-- `schema` *(required)*: The directory containing the GraphQL schema definition.  
+- `schema` *(required)*: The directory containing the GraphQL schema definition.
 The definition can be provided either as `GraphQLSchema` JS objects (from the `graphql` npm package),
 or as `.graphqls` files containing the schema using the GraphQL language:
 
@@ -65,17 +68,17 @@ The directory can contain multiple files, each with their own schema. Those indi
 
 - `resolvers` *(required)*: The directory in which GraphQL schema resolvers are located. They must be JavaScript files containing a default export which is a class of resolvers.
 
-Each resolver method must be static and be annotated with the `@resolve` decorator.
+Each resolver method must be static and be annotated with the `@Resolve` decorator.
 
 ```javascript
 // resolvers/ClientResolver.js
 
-import { resolve } from '@stilt/graphql';
+import { Resolve } from '@stilt/graphql';
 
 export default class ClientResolver {
 
   // resolve a mutation
-  @resolve('Mutation.addClient')
+  @Resolve('Mutation.addClient')
   async addClient({ name, age }) {
 
     const client = await Client.create({ name, age });
@@ -84,7 +87,7 @@ export default class ClientResolver {
   }
 
   // resolve a Query
-  @resolve('Mutation.clients')
+  @Resolve('Mutation.clients')
   async addClient() {
 
     const client = await Client.findAll();
@@ -93,7 +96,7 @@ export default class ClientResolver {
   }
 
   // resolve an object property
-  @resolve('Client.products')
+  @Resolve('Client.products')
   addClient({ client }) {
 
     return client.getAllProducts();

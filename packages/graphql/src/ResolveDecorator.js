@@ -27,10 +27,6 @@ function getSetMeta(Class: Function, methodName: string): ResolverOptions {
 
 function resolve(schemaPath: string, opts?: { parentKey?: string }): Function {
   return function decorate(Class, methodName) {
-    if (Class.constructor !== Function) {
-      throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
-    }
-
     const resolverOptions = getSetMeta(Class, methodName);
 
     resolverOptions.schemaKey = schemaPath;
@@ -44,11 +40,6 @@ function resolve(schemaPath: string, opts?: { parentKey?: string }): Function {
 function withGraphqlQuery(paramNum: number): Function {
 
   return function decorate(Class, methodName) {
-
-    if (Class.constructor !== Function) {
-      throw new Error(`Exposing instance methods as GraphQl endpoint is not currently supported (Method: ${Class.constructor.name}#${methodName}).`);
-    }
-
     const resolverOptions = getSetMeta(Class, methodName);
 
     resolverOptions.queryAsParameters = paramNum;
@@ -83,9 +74,18 @@ function getResolverMetadata(func: Function): ?ResolverClassMetadata {
   return meta;
 }
 
-export function classToResolvers(Class: Function | Object): Object {
-  if (typeof Class !== 'function') {
-    return Class;
+export function classToResolvers(Class: Function | Object, stiltApp): Object {
+  // non objects should map to nothing
+  if (Class === null || (typeof Class !== 'object' && typeof Class !== 'function')) {
+    return {};
+  }
+
+  // POJOs should be used as-is
+  if (typeof Class === 'object') {
+    const proto = Object.getPrototypeOf(Class);
+    if (proto === null || proto === Object.prototype) {
+      return Class;
+    }
   }
 
   const meta: ?ResolverClassMetadata = getResolverMetadata(Class);
@@ -103,6 +103,7 @@ export function classToResolvers(Class: Function | Object): Object {
         Class,
         methodName,
         Class[methodName],
+        stiltApp,
       ),
       options,
     );

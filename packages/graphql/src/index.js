@@ -1,8 +1,10 @@
 // @flow
 
-import assert from 'assert';
+import path from 'path';
+import fs from 'fs';
 import StiltHttp from '@stilt/http';
-import { fileLoader, mergeTypes, mergeResolvers } from 'merge-graphql-schemas';
+import { asyncGlob, coalesce } from '@stilt/util';
+import { mergeTypes, mergeResolvers } from 'merge-graphql-schemas';
 import { makeExecutableSchema } from 'graphql-tools';
 import { maskErrors } from 'graphql-errors';
 import mount from 'koa-mount';
@@ -34,27 +36,43 @@ export default class StiltGraphQl {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/graphql');
 
-  constructor(config) {
-    this._config = config;
+  constructor(config = {}) {
+
+    this._config = {
+      schemaGlob: config.schemas || '**/*.+(schema.js|graphqls)',
+      resolverGlob: config.resolvers || '**/*.resolver.js',
+      useGraphiql: coalesce(config.useGraphiql, true),
+      endpoint: coalesce(config.endpoint, '/graphql'),
+    };
   }
 
-  postInitPlugin(app) {
-    // this.logger = app.makeLogger('graphql');
+  async initPlugin(app) {
+    this._app = app;
 
-    this.server = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
-    this.loadSchema();
+    this.logger = app.makeLogger('graphql');
+
+    this.server = app.getPlugin(StiltHttp);
+
+    await this._loadSchema();
   }
 
-  loadSchema() {
-    const schemaDir = this._config.schema;
-    const resolverDir = this._config.resolvers;
-    const useGraphiql = coalesce(this._config.useGraphiql, true);
-    const endpoint = coalesce(this._config.endpoint, '/graphql');
+  async _loadSchema() {
+    const { schemaGlob, resolverGlob, useGraphiql, endpoint } = this._config;
 
-    const graphqlTypes = mergeTypes(fileLoader(schemaDir, { recursive: true }));
-    const resolvers = fileLoader(resolverDir, { recursive: true });
+    const [graphqlTypes, graphqlResolvers] = await Promise.all([
+      this._loadTypes(schemaGlob),
+      this._loadResolvers(resolverGlob),
+    ]);
 
-    const graphqlResolvers = mergeResolvers(resolvers.map(classToResolvers));
+    if (graphqlTypes == null) {
+      this.logger.info('GraphQL disabled as no schema has been found in project');
+      return;
+    }
+
+    if (graphqlResolvers == null) {
+      this.logger.info('GraphQL disabled as no resolver has been found in project');
+      return;
+    }
 
     const schema = makeExecutableSchema({
       typeDefs: graphqlTypes,
@@ -71,18 +89,59 @@ export default class StiltGraphQl {
       graphiql: useGraphiql,
     })));
   }
+
+  async _loadTypes(schemaGlob) {
+    const schemasFiles = await asyncGlob(schemaGlob);
+
+    if (schemasFiles.length === 0) {
+      return null;
+    }
+
+    const schemasParts = await Promise.all(schemasFiles.map(readOrRequireFile));
+
+    return mergeTypes(schemasParts);
+  }
+
+  async _loadResolvers(resolverGlob) {
+    const resolverFiles = await asyncGlob(resolverGlob);
+
+    if (resolverFiles.length === 0) {
+      return null;
+    }
+
+    const resolverClasses = await Promise.all(resolverFiles.map(readOrRequireFile));
+
+    // create an instance for each resolver
+    const resolverInstances = await Promise.all(
+      resolverClasses.map(resolverClass => {
+        if (typeof resolverClass === 'function') {
+          return this._app.instanciate(resolverClass);
+        }
+
+        return null;
+      })
+    );
+
+    // extract all graphql resolvers from static methods
+    const staticResolvers = resolverClasses.map(instance => classToResolvers(instance, this._app));
+
+    // extract all graphql resolvers from instance methods
+    const instanceResolvers = resolverInstances.map(instance => classToResolvers(instance, this._app));
+
+    return mergeResolvers([...staticResolvers, ...instanceResolvers]);
+  }
 }
 
 // TODO move to common "utils"
-function coalesce(...args) {
-  assert(args.length > 0, 'Must have at least one argument');
 
-  for (let i = 0; i < args.length - 1; i++) {
-    const arg = args[i];
-    if (arg != null) {
-      return arg;
-    }
+export function readOrRequireFile(filePath) {
+  const ext = path.parse(filePath).ext;
+
+  if (ext === '.ts' || ext === '.js') {
+    const module = require(filePath);
+
+    return module.default || module;
   }
 
-  return args[args.length - 1];
+  return fs.promises.readFile(filePath, 'utf8');
 }
