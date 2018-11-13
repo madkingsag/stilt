@@ -1,12 +1,22 @@
 // @flow
 
+import { asyncGlob } from '@stilt/util';
+import DependencyInjector from './dependency-injector';
+
+export { AsyncModuleInit, Inject, Inject as inject, AsyncModuleInit as asyncModuleInit } from './dependency-injector';
+
 export default class App {
 
-  _plugins = new Map();
+  _dependencyInjector = new DependencyInjector();
 
-  constructor() {
+  _plugins = new Map();
+  _injectablesGlob;
+
+  constructor(config = {}) {
+    asyncGlob.cwd = config.cwd;
 
     this.logger = this.makeLogger('core');
+    this._injectablesGlob = config.injectables || '**/*.injectable.js';
   }
 
   async initPlugins() {
@@ -65,7 +75,34 @@ export default class App {
    * Starts the application.
    */
   async init() {
+    await this._findInjectables();
+
     await this.initPlugins();
+  }
+
+  async _findInjectables() {
+    const injectableFiles = await asyncGlob(this._injectablesGlob);
+
+    const declarations = injectableFiles.map(file => {
+      const module = require(file);
+      if (module.default) {
+        return module.default();
+      }
+
+      return module();
+    });
+
+    for (const declaration of declarations) {
+      this._dependencyInjector.registerAll(declaration);
+    }
+  }
+
+  instanciate(Class) {
+    return this._dependencyInjector.getInstance(Class);
+  }
+
+  registerInjectables(map) {
+    return this._dependencyInjector.registerAll(map);
   }
 }
 
