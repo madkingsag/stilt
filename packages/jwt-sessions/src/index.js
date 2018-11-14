@@ -6,6 +6,7 @@ import StiltHttp from '@stilt/http';
 import koaJwt from 'koa-jwt';
 import jwt from 'jsonwebtoken';
 import { setCurrentInstance } from './decorators';
+import SessionProvider from './SessionProvider';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)
@@ -17,6 +18,9 @@ type Config = {
   secret: string,
   useCookies?: boolean | string,
 };
+
+export const ISessionProvider = Symbol('session-provider');
+export type { SessionProvider };
 
 export default class StiltJwtSessions {
 
@@ -70,6 +74,10 @@ export default class StiltJwtSessions {
           }
         }
       });
+    });
+
+    app.registerInjectables({
+      [ISessionProvider]: new SessionProvider(this),
     });
   }
 
