@@ -112,11 +112,11 @@ function formatSuccess(val, context) {
 }
 
 function formatError(err, context) {
-  if (!err || !err[IsRestError] || !err.status || err.status === 500 || !err.toJSON) {
+  if (!err || !err[IsRestError] || !err.toJSON) {
     throw err;
   }
 
-  context.response.status = err.status;
+  context.response.status = err.status || 500;
 
   return {
     error: err.toJSON(),
