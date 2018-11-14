@@ -1,17 +1,17 @@
 // @flow
 
-import StiltHttp, { makeControllerInjector } from '@stilt/http';
+import { makeControllerInjector, IContextProvider, type ContextProvider } from '@stilt/http';
 import changeCase from 'change-case';
 import RestError from './RestError';
 
 function makeParameterInjector(injectorOptions) {
 
   return makeControllerInjector({
-    dependencies: [StiltHttp],
-    run([pathParams], [stiltHttp]: [StiltHttp]) {
+    dependencies: [IContextProvider],
+    run([pathParams], [contextProvider]: [ContextProvider]) {
 
       // TODO replace with context-provider dependency.
-      const context = stiltHttp.getCurrentContext();
+      const context = contextProvider.getCurrentContext();
 
       const parsedParameters = Object.create(null);
 
