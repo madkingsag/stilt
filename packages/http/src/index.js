@@ -5,8 +5,10 @@ import Router from 'koa-better-router';
 import ip from 'ip';
 import chalk from 'chalk';
 import { AsyncHookMap } from 'async-hooks-map';
+import ContextProvider from './ContextProvider';
 
 export { makeControllerInjector } from './controllerInjectors';
+export const IContextProvider = Symbol('context-provider');
 
 // for an unknown reason, if I build the map in the constructor,
 // it will be unable to find "root" during request processing.
@@ -34,6 +36,10 @@ export default class StiltHttp {
       CONTEXT_MAP.closest('root').set(this._contextField, ctx);
 
       return next();
+    });
+
+    app.registerInjectables({
+      [IContextProvider]: new ContextProvider(this),
     });
   }
 
