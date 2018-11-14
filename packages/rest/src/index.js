@@ -4,8 +4,10 @@ import StiltHttp from '@stilt/http';
 import { asyncGlob } from '@stilt/util';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 import { getRoutingMetadata } from './HttpMethodsDecorators';
+import { IsRestError } from './RestError';
 
 export * from './HttpMethodsDecorators';
+export { default as RestError, IsRestError } from './RestError';
 
 export default class StiltRest {
 
@@ -109,16 +111,13 @@ function formatSuccess(val, context) {
 }
 
 function formatError(err, context) {
-  if (!err.status || err.status === 500) {
+  if (!err || !err[IsRestError] || !err.status || err.status === 500 || !err.toJSON) {
     throw err;
   }
 
   context.response.status = err.status;
 
   return {
-    error: {
-      code: err.code,
-      message: err.message,
-    },
+    error: err.toJSON(),
   };
 }
