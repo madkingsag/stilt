@@ -8,6 +8,7 @@ import { IsRestError } from './RestError';
 
 export * from './HttpMethodsDecorators';
 export { default as RestError, IsRestError } from './RestError';
+export { PathParams, QueryParams, PathParams as pathParams, QueryParams as queryParams } from './ParameterDecorators';
 
 export default class StiltRest {
 
