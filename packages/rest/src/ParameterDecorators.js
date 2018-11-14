@@ -7,8 +7,8 @@ import RestError from './RestError';
 function makeParameterInjector(injectorOptions) {
 
   return makeControllerInjector({
-    dependencies: [IContextProvider],
-    run([pathParams], [contextProvider]: [ContextProvider]) {
+    dependencies: { contextProvider: IContextProvider },
+    run([pathParams], { contextProvider }: { contextProvider: ContextProvider }) {
 
       // TODO replace with context-provider dependency.
       const context = contextProvider.getCurrentContext();
