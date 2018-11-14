@@ -39,6 +39,13 @@ export default class DependencyInjector {
       return cache;
     }
 
+    // we already have an instance instead of a function. Let's not instanciate it.
+    if (typeof Class !== 'function') {
+      this._instanceCache.set(Class, Class);
+
+      return Class;
+    }
+
     const instancePromise = this._createInstance(Class);
 
     this._instanceCache.set(Class, instancePromise);
