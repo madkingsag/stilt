@@ -2,6 +2,7 @@
 
 import Koa from 'koa';
 import Router from 'koa-better-router';
+import bodyParser from 'koa-bodyparser';
 import ip from 'ip';
 import chalk from 'chalk';
 import { AsyncHookMap } from 'async-hooks-map';
@@ -26,6 +27,10 @@ export default class StiltHttp {
     this.port = config.port;
 
     this.koa = new Koa();
+
+    // TODO only run bodyParser if body is requested by method (eg @BodyParams in rest)
+    this.koa.use(bodyParser());
+
     this.router = Router().loadMethods();
   }
 

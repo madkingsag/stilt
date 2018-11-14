@@ -111,6 +111,5 @@ async function injectParameter(methodParameters, injectorMeta, Class, methodName
     return;
   }
 
-
   Object.assign(parameter, injectableValues);
 }
