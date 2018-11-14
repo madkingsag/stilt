@@ -81,7 +81,7 @@ function wrapError(callback: Function) {
 
   return function wrappedError(context) {
     try {
-      const val = callback();
+      const val = callback(context.params || {});
 
       if (val == null || !val.then) {
         return formatSuccess(val, context);
