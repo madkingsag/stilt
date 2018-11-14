@@ -111,13 +111,6 @@ async function injectParameter(methodParameters, injectorMeta, Class, methodName
     return;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    for (const key of Object.keys(injectableValues)) {
-      if (hasOwnProperty(parameter, key)) {
-        throw new Error(`Trying to inject property ${key} inside object parameter ${parameterNum} of method ${Class.name || Class.constructor.name}#${methodName}, but such property already exists is the parameter.`);
-      }
-    }
-  }
 
   Object.assign(parameter, injectableValues);
 }
