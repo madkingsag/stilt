@@ -11,7 +11,8 @@ export default class DependencyInjector {
   registerAll(map: { [string | Symbol]: Promise<Function> | Function }) {
     const descriptors = Object.getOwnPropertyDescriptors(map);
 
-    for (const [key, descriptor] of Object.entries(descriptors)) {
+    for (const key of Reflect.ownKeys(descriptors)) {
+      const descriptor = descriptors[key];
 
       if (Object.prototype.hasOwnProperty.call(this._moduleMap, key)) {
         throw new Error(`Dependency ${JSON.stringify(key)} has been registered twice.`);
