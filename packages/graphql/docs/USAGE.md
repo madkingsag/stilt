@@ -36,8 +36,8 @@ The `StiltGraphql` constructor takes multiples options:
 
 ### `schema`
 
-- `schema` *(required)*: The directory containing the GraphQL schema definition.
-The definition can be provided either as `GraphQLSchema` JS objects (from the `graphql` npm package),
+- `schema` *(optional, default: `'**/*.+(schema.js|graphqls)'`)*: A [glob](https://en.wikipedia.org/wiki/Glob_(programming)) pattern defining which files should be treated as a part of the GraphQL Schema definition containing the GraphQL schema.
+The definitions can be provided either as `GraphQLSchema` JS objects (from the `graphql` npm package),
 or as `.graphqls` files containing the schema using the GraphQL language:
 
 ```graphql
@@ -60,15 +60,15 @@ type Mutation {
 }
 ```
 
-The directory can contain multiple files, each with their own schema. Those individual schemas will be merged together into one. (using [merge-graphql-schemas](https://github.com/okgrow/merge-graphql-schemas)).
+Each individual schema definition will be merged together into the main schema. (using [merge-graphql-schemas](https://github.com/okgrow/merge-graphql-schemas)).
 
 **Note**: Two types, `Query` and `Mutation`, have special meaning: They correspond to the `query` and `mutation` keys of a `GraphQLSchema`. These two types will be merged together in the merged schema. Other, custom, types will not be merged together.
 
 ### `resolvers`
 
-- `resolvers` *(required)*: The directory in which GraphQL schema resolvers are located. They must be JavaScript files containing a default export which is a class of resolvers.
+- `resolvers` *(optional, default: `'**/*.resolver.js'`)*:  A [glob](https://en.wikipedia.org/wiki/Glob_(programming)) pattern defining where GraphQL Resolvers are located. They must be JavaScript files containing a default export which is a class of resolvers.
 
-Each resolver method must be static and be annotated with the `@Resolve` decorator.
+Each resolver method must be annotated with the `@Resolve` decorator.
 
 ```javascript
 // resolvers/ClientResolver.js
