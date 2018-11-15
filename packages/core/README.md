@@ -1,4 +1,4 @@
-# @stilt/code
+# @stilt/core
 
 *Stilt Framework Conductor*
 

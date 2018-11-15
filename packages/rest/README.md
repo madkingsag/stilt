@@ -1,4 +1,4 @@
-# @stilt/graphql
+# @stilt/rest
 
 *Rest Layer for Stilt Framework*
 
