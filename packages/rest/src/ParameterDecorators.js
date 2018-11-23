@@ -5,7 +5,7 @@ import { isPlainObject } from '@stilt/util';
 import changeCase from 'change-case';
 import RestError from './RestError';
 
-function runValidation(paramName, paramValue, paramValidator, paramType, context, validationOpts) {
+function runValidation(paramName, paramValue, paramValidator, paramType, context, validationOpts, errorStatus) {
   // TODO: currently Joi is hardcoded but I want it to be configurable in the future.
 
   if (paramValidator == null) {
@@ -23,7 +23,7 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
     const validationError = validation.error;
 
     throw new RestError(`Invalid ${paramType} parameter ${JSON.stringify(paramName)} in ${JSON.stringify(context.route.route)}: ${validationError.message} (got ${JSON.stringify(paramValue)})`)
-      .withStatus(400)
+      .withStatus(errorStatus)
       .withCode(`INVALID_${changeCase.constantCase(paramName)}`);
   }
 
@@ -81,7 +81,7 @@ export const BodyParams = makeControllerInjector({
       const rawBodyObject = (typeof rawBody !== 'object' || rawBody === null) ? {} : rawBody;
 
       for (const [paramName, paramValidator] of Object.entries(bodyParams)) {
-        const parsedValue = runValidation(paramName, rawBodyObject[paramName], paramValidator, 'body', context, validationOptions);
+        const parsedValue = runValidation(paramName, rawBodyObject[paramName], paramValidator, 'body', context, validationOptions, 400);
 
         parsedParameters[paramName] = parsedValue;
       }
@@ -89,7 +89,12 @@ export const BodyParams = makeControllerInjector({
       return parsedParameters;
     }
 
-    return runValidation('<body>', rawBody, bodyParams, '', context, validationOptions);
+    const parsedBody = runValidation('<body>', rawBody, bodyParams, '', context, validationOptions, 400);
+    if (typeof parsedBody !== 'object' || parsedBody === null) {
+      return { body: parsedBody };
+    }
+
+    return parsedBody;
   },
 });
 
@@ -121,6 +126,7 @@ function makeParameterInjector(injectorOptions) {
             injectorOptions.name,
             context,
             validationOptions,
+            injectorOptions.errorStatus,
           );
         }
       }
@@ -139,6 +145,9 @@ export const PathParams = makeParameterInjector({
 
   // path params are non-null by default
   presence: 'required',
+
+  // if a part of the path is invalid, it's a not-found error.
+  errorStatus: 404,
 });
 
 export const QueryParams = makeParameterInjector({
@@ -150,4 +159,6 @@ export const QueryParams = makeParameterInjector({
 
   // query params are optional by default
   presence: 'optional',
+
+  errorStatus: 400,
 });
