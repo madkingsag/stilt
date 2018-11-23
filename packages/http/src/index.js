@@ -49,8 +49,24 @@ export default class StiltHttp {
     this.koa.use(this.router.middleware());
 
     // TODO only listen plugin if a route is registered
-    this.koa.listen(this.port, () => {
+    this.httpServer = this.koa.listen(this.port, () => {
       this._printServerStarted(this.port);
+    });
+  }
+
+  close() {
+    return new Promise((resolve, reject) => {
+      if (!this.server) {
+        return void resolve(false);
+      }
+
+      this.server.close(err => {
+        if (err) {
+          reject(err);
+        }
+
+        resolve(true);
+      });
     });
   }
 
