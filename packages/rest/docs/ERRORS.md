@@ -37,7 +37,7 @@ class UserRestApi {
 }
 ```
 
-#### Custom `UserError` class
+#### Custom `RestError` class
 
 If for any reason you need to define your own `RestError` class (such as for customizing the output), you can simply tag the instances of your error with the `IsRestError` Symbol.
 You will also need to provide a `.toJSON` method so only relevant fields are sent to the client, and a `.status` field (by default `500` is used).
