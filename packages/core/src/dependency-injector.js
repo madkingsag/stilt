@@ -15,7 +15,7 @@ export default class DependencyInjector {
       const descriptor = descriptors[key];
 
       if (Object.prototype.hasOwnProperty.call(this._moduleMap, key)) {
-        throw new Error(`Dependency ${JSON.stringify(key)} has been registered twice.`);
+        throw new Error(`Dependency ${JSON.stringify(String(key))} has been registered twice.`);
       }
 
       Object.defineProperty(this._moduleMap, key, descriptor);
@@ -30,7 +30,7 @@ export default class DependencyInjector {
       Class = await this._moduleMap[Class];
 
       if (Class == null) {
-        throw new Error(`Cannot instanciate dependency ${JSON.stringify(dependencyName)}: It has not been registered`);
+        throw new Error(`Cannot instanciate dependency ${JSON.stringify(String(dependencyName))}: It has not been registered`);
       }
     }
 
