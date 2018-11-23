@@ -11,10 +11,7 @@ import ContextProvider from './ContextProvider';
 export { makeControllerInjector } from './controllerInjectors';
 export const IContextProvider = Symbol('context-provider');
 
-// for an unknown reason, if I build the map in the constructor,
-// it will be unable to find "root" during request processing.
 const CONTEXT_MAP = new AsyncHookMap();
-CONTEXT_MAP.alias('root');
 
 export default class StiltHttp {
 
@@ -38,7 +35,7 @@ export default class StiltHttp {
     this.logger = app.makeLogger('http');
 
     this.koa.use((ctx, next) => {
-      CONTEXT_MAP.closest('root').set(this._contextField, ctx);
+      CONTEXT_MAP.set(this._contextField, ctx);
 
       return next();
     });
@@ -61,7 +58,7 @@ export default class StiltHttp {
    * @returns the context of the request that is currently being processed. Null if no request is being processed.
    */
   getCurrentContext() {
-    return CONTEXT_MAP.closest('root').get(this._contextField);
+    return CONTEXT_MAP.get(this._contextField);
   }
 
   /**
