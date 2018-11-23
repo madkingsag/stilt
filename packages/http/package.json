@@ -1,6 +1,6 @@
 {
   "name": "@stilt/http",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "scripts": {
