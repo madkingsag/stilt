@@ -10,9 +10,14 @@ export * from './HttpMethodsDecorators';
 export { default as RestError, IsRestError } from './RestError';
 export { PathParams, QueryParams, BodyParams, PathParams as pathParams, QueryParams as queryParams, BodyParams as bodyParams } from './ParameterDecorators';
 
+export interface JsonSerializer<T> {
+  serialize(input: T): any | Promise<any>;
+}
+
 export default class StiltRest {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/rest');
+  serializers: Map<Function, JsonSerializer<*>> = new Map();
 
   constructor(config = {}) {
     this._controllersGlob = config.controllers || '**/*.rest.js';
@@ -25,6 +30,63 @@ export default class StiltRest {
 
     this.server = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
     await this._loadControllers();
+  }
+
+  async addEntitySerializer(Class: Function, serializer: JsonSerializer) {
+
+    const serializerInstance = await this._app.instanciate(serializer);
+
+    this.serializers.set(Class.prototype, serializerInstance);
+  }
+
+  async entityToJson(entity: any) {
+
+    if (entity === null || typeof entity !== 'object') {
+      return entity;
+    }
+
+    const serializer = this.getSerializer(entity);
+    if (serializer) {
+      entity = await serializer.serialize(entity);
+    } else if (entity.toJSON) {
+      entity = entity.toJSON;
+    }
+
+    if (Array.isArray(entity)) {
+      return Promise.all(
+        entity.map(val => this.entityToJson(val)),
+      );
+    }
+
+    const serializedEntity = Object.create(null);
+    const promises = [];
+
+    for (const key of Object.keys(entity)) {
+      const val = entity[key];
+
+      promises.push(this.entityToJson(val).then(newVal => {
+        serializedEntity[key] = newVal;
+      }));
+    }
+
+    await Promise.all(promises);
+
+    return serializedEntity;
+  }
+
+  getSerializer(entity: Object) {
+    const proto = Object.getPrototypeOf(entity);
+    const serializer = this.serializers.get(proto);
+
+    if (serializer) {
+      return serializer;
+    }
+
+    if (proto === null) {
+      return null;
+    }
+
+    return this.getSerializer(proto);
   }
 
   async _loadControllers() {
@@ -72,43 +134,48 @@ export default class StiltRest {
           this._app,
         );
 
-        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, wrapError(routeHandler));
+        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, this._wrapError(routeHandler));
       }
     }
   }
-}
 
-function wrapError(callback: Function) {
+  _wrapError(callback: Function) {
 
-  return function wrappedError(context) {
-    try {
-      const val = callback(context.params || {});
+    const that = this;
 
-      if (val == null || !val.then) {
-        return formatSuccess(val, context);
+    return function wrappedError(context) {
+      try {
+        const val = callback(context.params || {});
+
+        if (val == null || !val.then) {
+          return that._formatSuccess(val, context);
+        }
+
+        return val.then(
+          asyncVal => that._formatSuccess(asyncVal, context),
+          e => formatError(e, context)
+        );
+      } catch (e) {
+        return formatError(e, context);
       }
+    };
+  }
 
-      return val.then(
-        asyncVal => formatSuccess(asyncVal, context),
-        e => formatError(e, context)
-      );
-    } catch (e) {
-      return formatError(e, context);
+  _formatSuccess(val, context) {
+
+    if (val === void 0) {
+      val = null;
     }
-  };
-}
 
-function formatSuccess(val, context) {
+    if (val && typeof val.pipe === 'function') {
+      return val;
+    }
 
-  if (val === void 0) {
-    val = null;
+    return this.entityToJson(val)
+      .then(newVal => {
+        return { data: newVal };
+      });
   }
-
-  if (val && typeof val.pipe === 'function') {
-    return val;
-  }
-
-  return { data: val };
 }
 
 function formatError(err, context) {
