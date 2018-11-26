@@ -71,7 +71,7 @@ export const BodyParams = makeControllerInjector({
     }
 
     const validationOptions = {
-      convert: false,
+      convert: true,
       presence: 'required',
     };
 
