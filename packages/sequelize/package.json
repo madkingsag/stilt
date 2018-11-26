@@ -16,8 +16,7 @@
   },
   "dependencies": {
     "@stilt/core": "^0.13.0",
-    "@stilt/util": "^0.9.0",
-    "sequelize-decorators": "^1.0.2"
+    "@stilt/util": "^0.9.0"
   },
   "devDependencies": {
     "sequelize": "^4.37.10"

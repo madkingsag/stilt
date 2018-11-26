@@ -4,7 +4,7 @@
 import { URL } from 'url';
 import Sequelize from 'sequelize';
 import { asyncGlob } from '@stilt/util';
-import { getDbMeta, Options } from './decorators';
+import { getAssociationMeta, getModelInitData } from './decorators';
 
 export {
   BelongsTo,
@@ -16,8 +16,8 @@ export {
   HasMany,
   hasMany,
 
-  Attribute,
-  attribute,
+  // Attribute,
+  // attribute,
 
   Attributes,
   attributes,
@@ -72,9 +72,7 @@ export default class StiltSequelize {
 
     const modelDirectory = this.config.models || '**/*.entity.js';
 
-    Options.currentSequelize = this.sequelize;
-    await loadModels(modelDirectory);
-    Options.currentSequelize = null;
+    await loadModels(modelDirectory, this.sequelize);
 
     await this.sequelize.authenticate();
     await this.sequelize.sync();
@@ -85,27 +83,46 @@ export default class StiltSequelize {
   }
 }
 
-async function loadModels(modelsGlob) {
+async function loadModels(modelsGlob, sequelize) {
 
   const modelFiles = await asyncGlob(modelsGlob);
 
-  for (const fileName of modelFiles) {
-    const module = require(fileName);
+  const models = modelFiles.map(file => {
+    const module = require(file);
     const model = module.default || module;
 
     if (typeof model !== 'function') {
-      throw new Error(`Could not load Sequelize Model in file ${fileName}. Make sure a Class is exported`);
+      throw new Error(`Could not load Sequelize Model in file ${file}. Make sure a Class is exported`);
     }
 
-    if (model.disabled) {
+    return model;
+  });
+
+  // init models
+  for (const model of models) {
+    const initData = getModelInitData(model);
+
+    model.init(
+      initData.attributes,
+      {
+        sequelize,
+        ...initData.options,
+      },
+    );
+  }
+
+  // init associations
+  for (const model of models) {
+    const meta = getAssociationMeta(model);
+    if (!(meta && meta.associations)) {
       continue;
     }
 
-    const meta = getDbMeta(model);
-    if (meta && meta.associations) {
-      for (const associations of meta.associations) {
-        model[associations.type](...associations.parameters);
-      }
+    // TODO: throw if parameters[0] hasn't been init (PR to sequelize itself)
+    // assert(model.sequelize)
+
+    for (const associations of meta.associations) {
+      model[associations.type](...associations.parameters);
     }
   }
 }

@@ -1,11 +1,10 @@
 // @flow
 
-import { hasOwnProperty } from '@stilt/util';
-import { Options as optionsDecorator } from 'sequelize-decorators';
+import { type Model } from 'sequelize';
 
 const METADATA = Symbol('stilt-sequelize-metadata');
 
-type DbMetaStruct = {
+type AssociationMeta = {
   associations: ?SequelizeAssociationMeta[],
 };
 
@@ -14,7 +13,7 @@ type SequelizeAssociationMeta = {
   parameters: any[],
 };
 
-function getSetMeta(target): DbMetaStruct {
+function getSetMeta(target): AssociationMeta {
   if (!target[METADATA]) {
     target[METADATA] = Object.create(null);
   }
@@ -22,7 +21,7 @@ function getSetMeta(target): DbMetaStruct {
   return target[METADATA];
 }
 
-function getDbMeta(target): ?DbMetaStruct {
+function getAssociationMeta(target): ?AssociationMeta {
   return target[METADATA];
 }
 
@@ -286,7 +285,7 @@ const HasMany = makeAssociationDecorator('hasMany', {
  *   onDelete: string,
  *   onUpdate: string,
  *   constraints: boolean,
- *   through: string | object,
+ *   through: string | Model,
  *
  *   // to invert
  *   foreignKey: string,
@@ -354,41 +353,51 @@ const BelongsToMany = makeAssociationDecorator('belongsToMany', {
   },
 });
 
-function Options(params) {
+const SequelizeOptions = Symbol('sequelize-options');
+const SequelizeAttributes = Symbol('sequelize-attributes');
 
-  if (!hasOwnProperty(params, 'sequelize')) {
-    Object.defineProperty(params, 'sequelize', {
-      get() {
-        if (!Options.currentSequelize) {
-          throw new Error('Model is being loaded before Sequelize had a chance to initialize.');
-        }
-
-        return Options.currentSequelize;
-      },
+function Options(options) {
+  return function decorate(model: Model) {
+    Object.defineProperty(model, SequelizeOptions, {
+      value: options,
+      enumerable: false,
+      configurable: false,
+      writable: false,
     });
-  }
-
-  return optionsDecorator(params);
+  };
 }
 
-export {
-  Attribute,
-  Attribute as attribute,
-  Attributes,
-  Attributes as attributes,
-} from 'sequelize-decorators';
+function Attributes(attributes) {
+  return function decorate(model: Model) {
+    Object.defineProperty(model, SequelizeAttributes, {
+      value: attributes,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+  };
+}
+
+export function getModelInitData(model: Model): { options: Object, attributes: Object } {
+  return {
+    options: model[SequelizeOptions] || {},
+    attributes: model[SequelizeAttributes] || {},
+  };
+}
 
 export const belongsTo = BelongsTo;
 export const belongsToMany = BelongsToMany;
 export const hasOne = HasOne;
 export const hasMany = HasMany;
-export const options = Options;
 
 export {
-  getDbMeta,
+  getAssociationMeta,
   BelongsTo,
   BelongsToMany,
   HasOne,
   HasMany,
   Options,
+  Options as options,
+  Attributes,
+  Attributes as attributes,
 };

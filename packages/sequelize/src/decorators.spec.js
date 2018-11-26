@@ -1,9 +1,9 @@
 // @flow
 
-import { getDbMeta, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators';
+import { getAssociationMeta, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators';
 
 function getAssociations(model) {
-  const meta = getDbMeta(model);
+  const meta = getAssociationMeta(model);
 
   if (meta == null) {
     return [];
