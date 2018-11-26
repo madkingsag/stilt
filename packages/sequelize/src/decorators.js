@@ -1,6 +1,7 @@
 // @flow
 
 import { type Model } from 'sequelize';
+import isCallable from 'is-callable'; // thx jordan you're awesome
 
 const METADATA = Symbol('stilt-sequelize-metadata');
 
@@ -32,6 +33,10 @@ function addAssociation(model, association) {
   meta.associations.push(association);
 }
 
+function isPureFunction(func: Function): boolean {
+  return isCallable(func) && Object.getPrototypeOf(func) === Function.prototype;
+}
+
 // Make associations two-way.
 function makeAssociationDecorator(associationType, options) {
   return function createAssociation(targetModel, associationOptions) {
@@ -40,6 +45,22 @@ function makeAssociationDecorator(associationType, options) {
       if (!associationOptions) {
         associationOptions = {};
       }
+
+      /*
+      * lazy-load models (so decorators can reference the decorated model using a function), eg:
+      * @BelongsTo(() => User)
+      * class User extends Model{}
+      */
+      if (isPureFunction(targetModel)) {
+        targetModel = targetModel();
+      }
+
+      // not ideal but getSymmetricalAssociation happens after addAssociation.
+      if (associationOptions.through && isPureFunction(associationOptions.through)) {
+        associationOptions.through = associationOptions.through();
+      }
+
+      /* \ lazy-load models */
 
       addAssociation(sourceModel, {
         type: associationType,
