@@ -203,6 +203,34 @@ Signatures:
 })
 ```
 
+### Associations with the same model
+
+If you need to create an association with the model that is currently being decorated, you can pass
+a function that returns said model instead of passing the model directly. This way the class has time to
+initialize before being used in the association.
+
+```javascript
+import { Model } from 'sequelize';
+import { Options, Attribute, BelongsTo } from '@stilt/sequelize';
+
+@Options()
+@Attributes({
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  name: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+  },
+})
+@BelongsTo(() => Category, { // <- notice how we pass an arrow function that returns the model class.
+  as: 'parent',
+})
+export default class Category extends Model {}
+```
+
 ### Decorator Naming
 
 All decorators exported by this plugin are available in both `camelCase` and `UpperCamelCase` (eg. both `@HasMany` and `@hasMany` are exported).
