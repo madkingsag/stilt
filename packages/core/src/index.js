@@ -122,6 +122,13 @@ export default class App {
   registerInjectables(map) {
     return this._dependencyInjector.registerAll(map);
   }
+
+  static async createApp(InitModule: Function, config: ?Config) {
+    const app = new App(config);
+    await app._findInjectables();
+
+    return app.instanciate(InitModule);
+  }
 }
 
 function getName(obj) {
