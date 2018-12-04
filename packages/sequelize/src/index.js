@@ -62,6 +62,13 @@ export default class StiltSequelize implements Plugin {
     this.logger = app.makeLogger('sequelize');
   }
 
+  async close() {
+    if (this._sequelizeMemoize) {
+      const sequelize = await this._sequelizeMemoize;
+      await sequelize.close();
+    }
+  }
+
   getSequelize() {
     if (!this._sequelizeMemoize) {
       this._sequelizeMemoize = this._getSequelize();
