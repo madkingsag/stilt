@@ -49,7 +49,11 @@ export default class StiltRest {
     if (serializer) {
       entity = await serializer.serialize(entity);
     } else if (entity.toJSON) {
-      entity = entity.toJSON;
+      entity = entity.toJSON();
+    }
+
+    if (entity === null || typeof entity !== 'object') {
+      return entity;
     }
 
     if (Array.isArray(entity)) {
