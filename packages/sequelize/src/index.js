@@ -1,9 +1,9 @@
 
 // @flow
 
-import { type Plugin } from '@stilt/core';
 import { URL } from 'url';
 import Sequelize from 'sequelize';
+import { type Plugin } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
 import { getAssociationMeta, getModelInitData } from './decorators';
 
@@ -36,7 +36,7 @@ type Config = {
   debug?: boolean,
 };
 
-export default class StiltSequelize implements Plugin {
+export default class StiltSequelize {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/sequelize');
 
@@ -50,34 +50,13 @@ export default class StiltSequelize implements Plugin {
   }
 
   async init(app) {
+    const sequelizeDeferred = Deferred();
 
     app.registerInjectables({
-      get [`${this.config.namespace}:sequelize`]() {
-
-        // init sequelize when it is required.
-        return this.getSequelize();
-      },
+      [`${this.config.namespace}:sequelize`]: sequelizeDeferred.promise,
     });
 
     this.logger = app.makeLogger('sequelize');
-  }
-
-  async close() {
-    if (this._sequelizeMemoize) {
-      const sequelize = await this._sequelizeMemoize;
-      await sequelize.close();
-    }
-  }
-
-  getSequelize() {
-    if (!this._sequelizeMemoize) {
-      this._sequelizeMemoize = this._getSequelize();
-    }
-
-    return this._sequelizeMemoize;
-  }
-
-  async _getSequelize() {
     const uri = new URL(this.config.databaseUri);
 
     this.sequelize = new Sequelize(
@@ -95,13 +74,27 @@ export default class StiltSequelize implements Plugin {
     const modelDirectory = this.config.models || '**/*.entity.js';
 
     await loadModels(modelDirectory, this.sequelize);
+    await this.start();
+
+    this.logger.info('Database Connection Ready');
+
+    sequelizeDeferred.resolve(this.sequelize);
+  }
+
+  async start() {
+    if (this.running) {
+      return;
+    }
+
+    this.running = true;
 
     await this.sequelize.authenticate();
     await this.sequelize.sync();
+  }
 
-    this.logger.debug('Database Connection Ready');
-
-    return this.sequelize;
+  async stop() {
+    await this.sequelize.stop();
+    this.running = false;
   }
 }
 
@@ -147,4 +140,14 @@ async function loadModels(modelsGlob, sequelize) {
       model[associations.type](...associations.parameters);
     }
   }
+}
+
+function Deferred() {
+
+  let resolve;
+  const promise = new Promise(_resolve => {
+    resolve = _resolve;
+  });
+
+  return { promise, resolve };
 }
