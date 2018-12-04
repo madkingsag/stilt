@@ -30,7 +30,7 @@ export default class DependencyInjector {
       Class = await this._moduleMap[Class];
 
       if (Class == null) {
-        throw new Error(`Cannot instanciate dependency ${JSON.stringify(String(dependencyName))}: It has not been registered`);
+        throw new Error(`Cannot instantiate dependency ${JSON.stringify(String(dependencyName))}: It has not been registered`);
       }
     }
 
@@ -39,7 +39,7 @@ export default class DependencyInjector {
       return cache;
     }
 
-    // we already have an instance instead of a function. Let's not instanciate it.
+    // we already have an instance instead of a function. Let's not instantiate it.
     if (typeof Class !== 'function') {
       this._instanceCache.set(Class, Class);
 

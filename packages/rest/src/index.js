@@ -34,7 +34,7 @@ export default class StiltRest {
 
   async addEntitySerializer(Class: Function, serializer: JsonSerializer) {
 
-    const serializerInstance = await this._app.instanciate(serializer);
+    const serializerInstance = await this._app.instantiate(serializer);
 
     this.serializers.set(Class.prototype, serializerInstance);
   }
@@ -113,7 +113,7 @@ export default class StiltRest {
     const apiInstances = await Promise.all(
       apiClasses.map(resolverClass => {
         if (typeof resolverClass === 'function') {
-          return this._app.instanciate(resolverClass);
+          return this._app.instantiate(resolverClass);
         }
 
         return null;

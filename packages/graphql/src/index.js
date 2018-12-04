@@ -115,7 +115,7 @@ export default class StiltGraphQl {
     const resolverInstances = await Promise.all(
       resolverClasses.map(resolverClass => {
         if (typeof resolverClass === 'function') {
-          return this._app.instanciate(resolverClass);
+          return this._app.instantiate(resolverClass);
         }
 
         return null;

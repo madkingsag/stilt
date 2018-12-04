@@ -1,5 +1,6 @@
 // @flow
 
+import util from 'util';
 import { asyncGlob } from '@stilt/util';
 import DependencyInjector from './dependency-injector';
 
@@ -77,7 +78,7 @@ export default class App {
     return this._plugins.get(pluginIdentifier);
   }
 
-  makeLogger() {
+  makeLogger(namespace: string) {
     // TODO use actual logger & namespace it.
     return console;
   }
@@ -116,6 +117,10 @@ export default class App {
   }
 
   instanciate(Class) {
+    return this.instantiate(Class);
+  }
+
+  instantiate(Class) {
     return this._dependencyInjector.getInstance(Class);
   }
 
@@ -127,10 +132,12 @@ export default class App {
     const app = new App(config);
     await app._findInjectables();
 
-    return app.instanciate(InitModule);
+    return app.instantiate(InitModule);
   }
 }
 
 function getName(obj) {
   return obj && obj.constructor && obj.constructor.name || String(obj);
 }
+
+App.prototype.instanciate = util.deprecate(App.prototype.instanciate, 'StiltCore#instanciate is deprecated and renamed into StiltCore#instantiate');

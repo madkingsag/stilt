@@ -39,7 +39,7 @@ function instantiateDependencyTable(stiltApp, table) {
   const resolvedDependencies = Object.create(null);
 
   for (const [key, value] of Object.entries(table)) {
-    const dependencyPromise = stiltApp.instanciate(value);
+    const dependencyPromise = stiltApp.instantiate(value);
 
     dependencyPromise.then(resolvedDep => {
       resolvedDependencies[key] = resolvedDep;
