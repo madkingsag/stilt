@@ -1,6 +1,7 @@
 
 // @flow
 
+import { type Plugin } from '@stilt/core';
 import { URL } from 'url';
 import Sequelize from 'sequelize';
 import { asyncGlob } from '@stilt/util';
@@ -35,7 +36,7 @@ type Config = {
   debug?: boolean,
 };
 
-export default class StiltSequelize {
+export default class StiltSequelize implements Plugin {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/sequelize');
 
@@ -49,13 +50,27 @@ export default class StiltSequelize {
   }
 
   async init(app) {
-    const sequelizeDeferred = Deferred();
 
     app.registerInjectables({
-      [`${this.config.namespace}:sequelize`]: sequelizeDeferred.promise,
+      get [`${this.config.namespace}:sequelize`]() {
+
+        // init sequelize when it is required.
+        return this.getSequelize();
+      },
     });
 
     this.logger = app.makeLogger('sequelize');
+  }
+
+  getSequelize() {
+    if (!this._sequelizeMemoize) {
+      this._sequelizeMemoize = this._getSequelize();
+    }
+
+    return this._sequelizeMemoize;
+  }
+
+  async _getSequelize() {
     const uri = new URL(this.config.databaseUri);
 
     this.sequelize = new Sequelize(
@@ -77,9 +92,9 @@ export default class StiltSequelize {
     await this.sequelize.authenticate();
     await this.sequelize.sync();
 
-    this.logger.info('Database Connection Ready');
+    this.logger.debug('Database Connection Ready');
 
-    sequelizeDeferred.resolve(this.sequelize);
+    return this.sequelize;
   }
 }
 
@@ -125,14 +140,4 @@ async function loadModels(modelsGlob, sequelize) {
       model[associations.type](...associations.parameters);
     }
   }
-}
-
-function Deferred() {
-
-  let resolve;
-  const promise = new Promise(_resolve => {
-    resolve = _resolve;
-  });
-
-  return { promise, resolve };
 }
