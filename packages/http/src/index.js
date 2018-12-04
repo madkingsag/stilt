@@ -6,10 +6,12 @@ import bodyParser from 'koa-bodyparser';
 import ip from 'ip';
 import chalk from 'chalk';
 import { AsyncHookMap } from 'async-hooks-map';
-import ContextProvider from './ContextProvider';
+import ContextProvider, { IContextProvider } from './ContextProvider';
 
 export { makeControllerInjector } from './controllerInjectors';
-export const IContextProvider = Symbol('context-provider');
+export { WithContext, withContext } from './WithContext';
+
+export { IContextProvider };
 
 const CONTEXT_MAP = new AsyncHookMap();
 
