@@ -39,7 +39,7 @@ export default class StiltJwtSessions {
     }
   }
 
-  initPlugin(app) {
+  init(app) {
     const httpModule = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
     this._httpModule = httpModule;
     const koa = httpModule.koa;

@@ -31,7 +31,7 @@ export default class StiltHttp {
     this.router = Router().loadMethods();
   }
 
-  preInitPlugin(app) {
+  init(app) {
     this.logger = app.makeLogger('http');
 
     this.koa.use((ctx, next) => {
@@ -45,13 +45,21 @@ export default class StiltHttp {
     });
   }
 
-  postInitPlugin() {
+  async start() {
     this.koa.use(this.router.middleware());
 
     // TODO only listen plugin if a route is registered
-    this.httpServer = this.koa.listen(this.port, () => {
-      this._printServerStarted(this.port);
+    await new Promise((resolve, reject) => {
+      this.httpServer = this.koa.listen(this.port, (err, val) => {
+        if (err) {
+          return void reject(err);
+        }
+
+        resolve(val);
+      });
     });
+
+    this._printServerStarted(this.port);
   }
 
   close() {

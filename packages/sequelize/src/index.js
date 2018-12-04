@@ -48,7 +48,7 @@ export default class StiltSequelize {
     };
   }
 
-  async preInitPlugin(app) {
+  async init(app) {
     const sequelizeDeferred = Deferred();
 
     app.registerInjectables({

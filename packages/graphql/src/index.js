@@ -46,7 +46,7 @@ export default class StiltGraphQl {
     };
   }
 
-  async initPlugin(app) {
+  async init(app) {
     this._app = app;
 
     this.logger = app.makeLogger('graphql');

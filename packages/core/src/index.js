@@ -5,33 +5,42 @@ import DependencyInjector from './dependency-injector';
 
 export { AsyncModuleInit, Inject, Inject as inject, AsyncModuleInit as asyncModuleInit } from './dependency-injector';
 
+export interface Plugin {
+
+  init(app: App): void;
+  start(): void | Promise<void>;
+}
+
+type Config = {
+  cwd: ?string,
+  logLevel: ?string,
+  injectables: ?string,
+};
+
 export default class App {
 
   _dependencyInjector = new DependencyInjector();
 
-  _plugins = new Map();
+  _plugins: Map<Symbol, Plugin> = new Map();
   _injectablesGlob;
+  _pluginInitPromises = [];
 
-  constructor(config = {}) {
+  constructor(config: Config = {}) {
+
     asyncGlob.cwd = config.cwd;
 
-    this.logger = this.makeLogger('core');
+    this._defaultLogLevel = config.logLevel || 'info';
+
+    this.logger = this.makeLogger('core', { logLevel: this._defaultLogLevel });
     this._injectablesGlob = config.injectables || '**/*.injectable.js';
+
+    this.registerInjectables(App, this);
   }
 
-  async initPlugins() {
-    // TODO init phases VS "load before / after"?
-
-    await this._runPhase('preInit');
-    await this._runPhase('init');
-    await this._runPhase('postInit');
-  }
-
-  _runPhase(phase) {
+  _runPluginMethod(methodName) {
     const promises = [...this._plugins.values()].map(plugin => {
-      const methodName = `${phase}Plugin`;
       if (plugin[methodName]) {
-        this.logger.debug(`Running ${phase} on ${getName(plugin)}`);
+        this.logger.debug(`Running ${methodName} on ${getName(plugin)}`);
         return plugin[methodName](this);
       }
 
@@ -41,17 +50,18 @@ export default class App {
     return Promise.all(promises);
   }
 
-  use(plugin) {
+  use(plugin: Plugin) {
     const moduleIdentifier = plugin.MODULE_IDENTIFIER || plugin.constructor.MODULE_IDENTIFIER;
     if (typeof moduleIdentifier !== 'symbol') {
       throw new TypeError(`Trying to load stilt plugin named "${getName(plugin)}" but we cannot uniquely identify it. It is missing the property "MODULE_IDENTIFIER" (must be a Symbol).`);
     }
 
-    if (typeof plugin.preInitPlugin !== 'function' && typeof plugin.initPlugin !== 'function' && typeof plugin.postInitPlugin !== 'function') {
-      throw new TypeError(`Trying to load stilt plugin named "${getName(plugin)}" but it is missing an initialization method (preInitPlugin, initPlugin or postInitPlugin). (signature: (app: App) => void)`);
-    }
-
     this._plugins.set(moduleIdentifier, plugin);
+
+    this._pluginInitPromises.push(plugin.init(this));
+
+    this.registerInjectables(moduleIdentifier, plugin);
+    this.registerInjectables(plugin.constructor, plugin);
   }
 
   getPlugin(pluginIdentifier) {
@@ -74,10 +84,11 @@ export default class App {
   /**
    * Starts the application.
    */
-  async init() {
+  async start() {
+    await Promise.all(this._pluginInitPromises);
     await this._findInjectables();
+    await this._runPluginMethod('start');
 
-    await this.initPlugins();
   }
 
   async _findInjectables() {

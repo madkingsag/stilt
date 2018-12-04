@@ -23,7 +23,7 @@ export default class StiltRest {
     this._controllersGlob = config.controllers || '**/*.rest.js';
   }
 
-  async initPlugin(app) {
+  async init(app) {
     this._app = app;
 
     this.logger = app.makeLogger('rest');
