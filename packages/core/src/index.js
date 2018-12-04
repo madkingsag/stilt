@@ -9,6 +9,7 @@ export interface Plugin {
 
   init(app: App): void;
   start(): void | Promise<void>;
+  close(): void | Promise<void>;
 }
 
 type Config = {
@@ -88,7 +89,13 @@ export default class App {
     await Promise.all(this._pluginInitPromises);
     await this._findInjectables();
     await this._runPluginMethod('start');
+  }
 
+  /**
+   * Closes the application
+   */
+  async close() {
+    await this._runPluginMethod('close');
   }
 
   async _findInjectables() {
