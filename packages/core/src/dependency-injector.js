@@ -22,6 +22,10 @@ export default class DependencyInjector {
     }
   }
 
+  registerInstance(Class, instance) {
+    this._instanceCache.set(Class, instance);
+  }
+
   async getInstance(Class: Function | string | Symbol) {
     const type = typeof Class;
 

@@ -36,7 +36,8 @@ export default class App {
     this.logger = this.makeLogger('core', { logLevel: this._defaultLogLevel });
     this._injectablesGlob = config.injectables || '**/*.injectable.js';
 
-    this.registerInjectables(App, this);
+    // make StiltApp injectable
+    this._dependencyInjector.registerInstance(App, this);
   }
 
   _runPluginMethod(methodName) {
@@ -62,8 +63,9 @@ export default class App {
 
     this._pluginInitPromises.push(plugin.init(this));
 
-    this.registerInjectables(moduleIdentifier, plugin);
-    this.registerInjectables(plugin.constructor, plugin);
+    // make this plugin injectable
+    this._dependencyInjector.registerAll({ [moduleIdentifier]: plugin });
+    this._dependencyInjector.registerInstance(plugin.constructor, plugin);
   }
 
   getPlugin(pluginIdentifier) {
