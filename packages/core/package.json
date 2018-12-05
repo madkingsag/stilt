@@ -1,6 +1,6 @@
 {
   "name": "@stilt/core",
-  "version": "0.13.0",
+  "version": "0.15.0",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "scripts": {
@@ -12,6 +12,6 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@stilt/util": "^0.9.0"
+    "@stilt/util": "^0.15.0"
   }
 }
