@@ -1,6 +1,6 @@
 // @flow
 
-import type ContextProvider, { IContextProvider } from './ContextProvider';
+import ContextProvider, { IContextProvider } from './ContextProvider';
 import { makeControllerInjector } from './controllerInjectors';
 
 export const WithContext = makeControllerInjector({
