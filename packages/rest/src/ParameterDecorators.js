@@ -13,7 +13,7 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
   }
 
   if (!paramValidator.isJoi) {
-    throw new Error('[REST] Currently only Joi validation is supported in parameter decorators. Either provide a Joi schema, use an array instead of an object for the list of parameters, or set the value to null.');
+    throw new Error('[REST] Currently only Joi validation is supported in parameter decorators.');
   }
 
   const Joi = require('joi');
@@ -30,6 +30,92 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
   return validation.value;
 }
 
+function makeParameterInjector(factoryOptions) {
+
+  const validationOptions = { convert: true, presence: factoryOptions.presence };
+
+  return makeControllerInjector({
+    dependencies: { contextProvider: IContextProvider },
+    run([validators, runtimeOptions], { contextProvider }: { contextProvider: ContextProvider }) {
+
+      const context = contextProvider.getCurrentContext();
+      const rawParametersBag = factoryOptions.getParametersBag(context);
+      const outputKey = runtimeOptions && runtimeOptions.as;
+
+      if (validators == null) {
+        return null;
+      }
+
+      if (Array.isArray(validators)) {
+
+        if (typeof rawParametersBag !== 'object' || rawParametersBag === null) {
+          return null;
+        }
+
+        const parsedParameters = Object.create(null);
+        for (const paramName of validators) {
+          parsedParameters[paramName] = rawParametersBag[paramName];
+        }
+
+        return outputKey ? { [outputKey]: parsedParameters } : parsedParameters;
+      }
+
+      if (isPlainObject(validators)) {
+        const parsedParameters = Object.create(null);
+
+        for (const [paramName, paramValidator] of Object.entries(validators)) {
+
+          const rawParameter = rawParametersBag[paramName];
+
+          parsedParameters[paramName] = runValidation(
+            paramName,
+            rawParameter,
+            paramValidator,
+            factoryOptions.name,
+            context,
+            validationOptions,
+            factoryOptions.errorStatus,
+          );
+        }
+
+        return outputKey ? { [outputKey]: parsedParameters } : parsedParameters;
+      }
+
+      const parsedBag = runValidation(`<${factoryOptions.name}>`, rawParametersBag, validators, '', context, validationOptions, factoryOptions.errorStatus);
+      if (outputKey || !isPlainObject(parsedBag)) {
+        return { [outputKey || factoryOptions.name]: parsedBag };
+      }
+
+      return parsedBag;
+    },
+  });
+}
+
+export const PathParams = makeParameterInjector({
+  name: 'path',
+  getParametersBag(context) {
+    return context.params;
+  },
+
+  // path params are non-null by default
+  presence: 'required',
+
+  // if a part of the path is invalid, it's a not-found error.
+  errorStatus: 404,
+});
+
+export const QueryParams = makeParameterInjector({
+  name: 'query',
+  getParametersBag(context) {
+    return context.query;
+  },
+
+  // query params are optional by default
+  presence: 'optional',
+
+  errorStatus: 400,
+});
+
 /**
  * @example
  * \@BodyParams(Joi.object().keys({ val: Joi.string() }))
@@ -44,121 +130,27 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
  * @example
  * \@BodyParams(Joi.string())
  * => output { body: '' }
+ *
+ * @example
+ * \@BodyParams(Joi.array())
+ * => output { body: [] }
+ *
+ * @example
+ * \@BodyParams(Joi.string(), { as: 'val' })
+ * => output { val: '' }
+ *
+ * @example
+ * \@BodyParams(Joi.string(), { as: 'val' })
+ * => output { val: '' }
  */
-export const BodyParams = makeControllerInjector({
-  dependencies: { contextProvider: IContextProvider },
-  run([bodyParams], { contextProvider }: { contextProvider: ContextProvider }) {
-
-    if (bodyParams == null) {
-      return null;
-    }
-
-    const context = contextProvider.getCurrentContext();
-    const rawBody = context.request.body;
-
-    if (Array.isArray(bodyParams)) {
-
-      if (typeof rawBody !== 'object' || rawBody === null) {
-        return null;
-      }
-
-      const parsedParameters = Object.create(null);
-      for (const paramName of bodyParams) {
-        parsedParameters[paramName] = rawBody[paramName];
-      }
-
-      return parsedParameters;
-    }
-
-    const validationOptions = {
-      convert: true,
-      presence: 'required',
-    };
-
-    if (isPlainObject(bodyParams)) {
-      const parsedParameters = Object.create(null);
-
-      const rawBodyObject = (typeof rawBody !== 'object' || rawBody === null) ? {} : rawBody;
-
-      for (const [paramName, paramValidator] of Object.entries(bodyParams)) {
-        const parsedValue = runValidation(paramName, rawBodyObject[paramName], paramValidator, 'body', context, validationOptions, 400);
-
-        parsedParameters[paramName] = parsedValue;
-      }
-
-      return parsedParameters;
-    }
-
-    const parsedBody = runValidation('<body>', rawBody, bodyParams, '', context, validationOptions, 400);
-    if (typeof parsedBody !== 'object' || parsedBody === null) {
-      return { body: parsedBody };
-    }
-
-    return parsedBody;
+export const BodyParams = makeParameterInjector({
+  name: 'body',
+  getParametersBag(context) {
+    return context.request.body;
   },
-});
 
-function makeParameterInjector(injectorOptions) {
-
-  const validationOptions = { convert: injectorOptions.convert, presence: injectorOptions.presence };
-
-  return makeControllerInjector({
-    dependencies: { contextProvider: IContextProvider },
-    run([pathParams], { contextProvider }: { contextProvider: ContextProvider }) {
-
-      const context = contextProvider.getCurrentContext();
-
-      const parsedParameters = Object.create(null);
-
-      if (Array.isArray(pathParams)) {
-        for (const paramName of pathParams) {
-          parsedParameters[paramName] = context[injectorOptions.contextKey][paramName];
-        }
-      } else {
-        for (const [paramName, paramValidator] of Object.entries(pathParams)) {
-
-          const paramValue = context[injectorOptions.contextKey][paramName];
-
-          parsedParameters[paramName] = runValidation(
-            paramName,
-            paramValue,
-            paramValidator,
-            injectorOptions.name,
-            context,
-            validationOptions,
-            injectorOptions.errorStatus,
-          );
-        }
-      }
-
-      return parsedParameters;
-    },
-  });
-}
-
-export const PathParams = makeParameterInjector({
-  name: 'path',
-  contextKey: 'params',
-
-  // path params types can be converted by validators
-  convert: true,
-
-  // path params are non-null by default
+  // body params are required by default
   presence: 'required',
-
-  // if a part of the path is invalid, it's a not-found error.
-  errorStatus: 404,
-});
-
-export const QueryParams = makeParameterInjector({
-  name: 'query',
-  contextKey: 'query',
-
-  // query params type can be converted by validators
-  convert: true,
-
-  // query params are optional by default
-  presence: 'optional',
 
   errorStatus: 400,
 });
