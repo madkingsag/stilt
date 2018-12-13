@@ -66,11 +66,11 @@ export default class StiltHttp {
 
   close() {
     return new Promise((resolve, reject) => {
-      if (!this.server) {
+      if (!this.httpServer) {
         return void resolve(false);
       }
 
-      this.server.close(err => {
+      this.httpServer.close(err => {
         if (err) {
           reject(err);
         }
