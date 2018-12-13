@@ -47,3 +47,33 @@ export function coalesce(...args) {
 
   return args[args.length - 1];
 }
+
+export async function awaitAllEntries(obj: Object): Object {
+
+  const values = await Promise.all(Object.values(obj));
+  const keys = Object.keys(obj);
+
+  const resolvedObject = Object.create(null);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+
+    resolvedObject[key] = values[i];
+  }
+
+  return resolvedObject;
+}
+
+export function mapObject(
+  obj: Object,
+  callback: (value: any, key: string) => any,
+): Object {
+
+  const keys = Object.keys(obj);
+  const newObject = Object.create(null);
+  for (const key of keys) {
+
+    newObject[key] = callback(obj[key], key);
+  }
+
+  return newObject;
+}

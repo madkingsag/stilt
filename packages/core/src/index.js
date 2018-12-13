@@ -1,16 +1,16 @@
 // @flow
 
 import util from 'util';
-import { asyncGlob } from '@stilt/util';
+import { asyncGlob, awaitAllEntries, isPlainObject, mapObject } from '@stilt/util';
 import DependencyInjector from './dependency-injector';
 
 export { AsyncModuleInit, Inject, Inject as inject, AsyncModuleInit as asyncModuleInit } from './dependency-injector';
 
 export interface Plugin {
 
-  init(app: App): void;
-  start(): void | Promise<void>;
-  close(): void | Promise<void>;
+  +init?: (app: App) => void | Promise<void>;
+  +start?: () => void | Promise<void>;
+  +close?: () => void | Promise<void>;
 }
 
 type Config = {
@@ -122,7 +122,21 @@ export default class App {
     return this.instantiate(Class);
   }
 
-  instantiate(Class) {
+  instantiate: <T>(classList: Array<Class<T>>) => T[];
+  instantiate: <T>(classList: { [string]: Class<T> }) => { [string]: T };
+
+  instantiate<T>(Class: Class<T>): T {
+    if (typeof Class === 'object' && Class !== null) {
+
+      if (Array.isArray(Class)) {
+        return Promise.all(Class.map(ClassItem => this._dependencyInjector.getInstance(ClassItem)));
+      }
+
+      if (isPlainObject(Class)) {
+        return awaitAllEntries(mapObject(Class, ClassItem => this._dependencyInjector.getInstance(ClassItem)));
+      }
+    }
+
     return this._dependencyInjector.getInstance(Class);
   }
 
