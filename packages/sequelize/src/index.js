@@ -92,8 +92,8 @@ export default class StiltSequelize {
     await this.sequelize.sync();
   }
 
-  async stop() {
-    await this.sequelize.stop();
+  async close() {
+    await this.sequelize.close();
     this.running = false;
   }
 }
