@@ -14,8 +14,8 @@
   "dependencies": {
     "@stilt/http": "^0.16.0",
     "@stilt/util": "^0.16.0",
-    "change-case": "^3.0.2",
+    "change-case": "^3.1.0",
     "deep-freeze-strict": "^1.1.1",
-    "lodash": "^4.17.10"
+    "lodash": "^4.17.15"
   }
 }

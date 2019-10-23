@@ -12,6 +12,6 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "glob": "^7.1.3"
+    "glob": "^7.1.5"
   }
 }
