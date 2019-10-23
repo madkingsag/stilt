@@ -1,6 +1,6 @@
 {
   "name": "@stilt/http",
-  "version": "0.16.0",
+  "version": "0.17.1",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@stilt/util": "^0.16.0",
+    "@stilt/util": "^0.17.1",
     "async-hooks-map": "^1.2.0",
     "chalk": "^2.4.2",
     "ip": "^1.1.5",
