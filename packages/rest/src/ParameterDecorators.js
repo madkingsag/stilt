@@ -16,8 +16,7 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
     throw new Error('[REST] Currently only Joi validation is supported in parameter decorators.');
   }
 
-  const Joi = require('joi');
-  const validation = Joi.validate(paramValue, paramValidator, validationOpts);
+  const validation = paramValidator.validate(paramValue, validationOpts);
 
   if (validation.error) {
     const validationError = validation.error;
@@ -32,7 +31,10 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
 
 function makeParameterInjector(factoryOptions) {
 
-  const validationOptions = { convert: true, presence: factoryOptions.presence };
+  const validationOptions = {
+    convert: true,
+    ...factoryOptions.joiOptions,
+  };
 
   return makeControllerInjector({
     dependencies: { contextProvider: IContextProvider },
@@ -97,8 +99,11 @@ export const PathParams = makeParameterInjector({
     return context.params;
   },
 
-  // path params are non-null by default
-  presence: 'required',
+  joiOptions: {
+
+    // path params are non-null by default
+    presence: 'required',
+  },
 
   // if a part of the path is invalid, it's a not-found error.
   errorStatus: 404,
@@ -110,8 +115,13 @@ export const QueryParams = makeParameterInjector({
     return context.query;
   },
 
-  // query params are optional by default
-  presence: 'optional',
+  joiOptions: {
+
+    // query params are optional by default
+    presence: 'optional',
+    allowUnknown: true,
+    stripUnknown: true,
+  },
 
   errorStatus: 400,
 });
@@ -149,8 +159,28 @@ export const BodyParams = makeParameterInjector({
     return context.request.body;
   },
 
-  // body params are required by default
-  presence: 'required',
+  joiOptions: {
+
+    // body params are required by default
+    presence: 'required',
+  },
+
+  errorStatus: 400,
+});
+
+export const Headers = makeParameterInjector({
+  name: 'header',
+  getParametersBag(context) {
+    return context.request.headers;
+  },
+
+  joiOptions: {
+
+    // query params are optional by default
+    presence: 'optional',
+    allowUnknown: true,
+    stripUnknown: true,
+  },
 
   errorStatus: 400,
 });
