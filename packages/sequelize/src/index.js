@@ -130,7 +130,7 @@ async function loadModels(modelsGlob, sequelize) {
   for (const association of associations) {
     const model = association.model;
 
-    model[associations.type](...associations.parameters);
+    model[association.type](...association.parameters);
   }
 }
 
