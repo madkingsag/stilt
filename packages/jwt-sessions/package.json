@@ -1,6 +1,6 @@
 {
   "name": "@stilt/jwt-sessions",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "description": "Add JWT sessions to @stilt/http",
   "main": "dist/index.js",
   "scripts": {
