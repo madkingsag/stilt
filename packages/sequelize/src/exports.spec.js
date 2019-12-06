@@ -34,11 +34,6 @@ describe('@stilt/sequelize', () => {
     expect(seqExports.Attributes).toBeDefined();
   });
 
-  it('Exports Attribute', () => {
-    expect(seqExports.attribute).toBeDefined();
-    expect(seqExports.Attributes).toBeDefined();
-  });
-
   it('Exports StiltSequelize', () => {
     expect(seqExports.default).toBeDefined();
     expect(seqExports.default.name).toEqual('StiltSequelize');

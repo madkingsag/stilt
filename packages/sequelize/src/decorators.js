@@ -5,32 +5,89 @@ import isCallable from 'is-callable'; // thx jordan you're awesome
 
 const METADATA = Symbol('stilt-sequelize-metadata');
 
-type AssociationMeta = {
-  associations: ?SequelizeAssociationMeta[],
+type AssociationType = string;
+type AssociationOptions = Object;
+type GetSymmetricalAssociationFunc = (AssociationOptions) => null | ({
+  type: AssociationType,
+  options: AssociationOptions,
+});
+
+type AssociationTag = {
+  sourceModel: typeof Model,
+  targetModel: typeof Model | () => typeof Model,
+  associationType: AssociationType,
+  getSymmetricalAssociation: GetSymmetricalAssociationFunc,
+  associationOptions: AssociationOptions,
 };
 
 type SequelizeAssociationMeta = {
+  model: typeof Model,
   type: string,
   parameters: any[],
 };
 
-function getSetMeta(target): AssociationMeta {
-  if (!target[METADATA]) {
-    target[METADATA] = Object.create(null);
+// TODO: replace with Array.prototype.flat when available
+function flat<T>(arr: T[][]): T[] {
+  const result = [];
+
+  for (const item of arr) {
+    result.push(...item);
   }
 
-  return target[METADATA];
+  return result;
 }
 
-function getAssociationMeta(target): ?AssociationMeta {
-  return target[METADATA];
+function getAssociationMeta(models: Array<typeof Model>): SequelizeAssociationMeta[] {
+  const associations: SequelizeAssociationMeta[] = [];
+  const associationTags: AssociationTag[] = flat(models
+    .map(model => model[METADATA])
+    .filter(tags => tags != null));
+
+  for (const associationTag of associationTags) {
+    const { sourceModel, associationType, getSymmetricalAssociation } = associationTag;
+    const associationOptions = { ...associationTag.associationOptions };
+
+    /*
+    * lazy-load models (so decorators can reference the decorated model using a function), eg:
+    * @BelongsTo(() => User)
+    * class User extends Model{}
+    */
+    const targetModel = isPureFunction(associationTag.targetModel)
+      ? associationTag.targetModel()
+      : associationTag.targetModel;
+
+    // lazy-load association.through
+    if (associationOptions.through && isPureFunction(associationOptions.through)) {
+      associationOptions.through = associationOptions.through();
+    }
+
+    associations.push({
+      model: sourceModel,
+      type: associationType,
+      parameters: [targetModel, associationOptions],
+    });
+
+    // create association on target model too.
+    const inverseAssoc = getSymmetricalAssociation(associationOptions);
+    if (inverseAssoc != null) {
+
+      associations.push({
+        model: targetModel,
+        type: inverseAssoc.type,
+        parameters: [sourceModel, inverseAssoc.options],
+      });
+    }
+  }
+
+  return associations;
 }
 
-function addAssociation(model, association) {
-  const meta = getSetMeta(model);
-  meta.associations = meta.associations || [];
+function tagAssociation(model, associationMeta: AssociationTag) {
+  if (!model[METADATA]) {
+    model[METADATA] = [];
+  }
 
-  meta.associations.push(association);
+  model[METADATA].push(associationMeta);
 }
 
 function isPureFunction(func: Function): boolean {
@@ -38,44 +95,23 @@ function isPureFunction(func: Function): boolean {
 }
 
 // Make associations two-way.
-function makeAssociationDecorator(associationType, options) {
-  return function createAssociation(targetModel, associationOptions) {
+function makeAssociationDecorator(associationType, { getSymmetricalAssociation }) {
+  return function createAssociation(targetModel, associationOptions: AssociationOptions) {
     return function decorate(sourceModel) {
 
       if (!associationOptions) {
         associationOptions = {};
       }
 
-      /*
-      * lazy-load models (so decorators can reference the decorated model using a function), eg:
-      * @BelongsTo(() => User)
-      * class User extends Model{}
-      */
-      if (isPureFunction(targetModel)) {
-        targetModel = targetModel();
-      }
-
-      // not ideal but getSymmetricalAssociation happens after addAssociation.
-      if (associationOptions.through && isPureFunction(associationOptions.through)) {
-        associationOptions.through = associationOptions.through();
-      }
-
-      /* \ lazy-load models */
-
-      addAssociation(sourceModel, {
-        type: associationType,
-        parameters: [targetModel, associationOptions],
+      // register metadata now, resolve later
+      // so models can be lazy-resolved
+      tagAssociation(sourceModel, {
+        associationType,
+        getSymmetricalAssociation,
+        sourceModel,
+        targetModel,
+        associationOptions,
       });
-
-      // create association on target model too.
-      const inverseAssoc = options.getSymmetricalAssociation(associationOptions);
-      if (inverseAssoc != null) {
-
-        addAssociation(targetModel, {
-          type: inverseAssoc.type,
-          parameters: [sourceModel, inverseAssoc.options],
-        });
-      }
 
       return sourceModel;
     };

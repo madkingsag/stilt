@@ -3,7 +3,6 @@
 
 import { URL } from 'url';
 import Sequelize from 'sequelize';
-import { type Plugin } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
 import { getAssociationMeta, getModelInitData } from './decorators';
 
@@ -126,19 +125,12 @@ async function loadModels(modelsGlob, sequelize) {
     );
   }
 
-  // init associations
-  for (const model of models) {
-    const meta = getAssociationMeta(model);
-    if (!(meta && meta.associations)) {
-      continue;
-    }
+  const associations = getAssociationMeta(models);
 
-    // TODO: throw if parameters[0] hasn't been init (PR to sequelize itself)
-    // assert(model.sequelize)
+  for (const association of associations) {
+    const model = association.model;
 
-    for (const associations of meta.associations) {
-      model[associations.type](...associations.parameters);
-    }
+    model[associations.type](...associations.parameters);
   }
 }
 

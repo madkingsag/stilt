@@ -1,16 +1,6 @@
 // @flow
 
-import { getAssociationMeta, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators';
-
-function getAssociations(model) {
-  const meta = getAssociationMeta(model);
-
-  if (meta == null) {
-    return [];
-  }
-
-  return meta.associations || [];
-}
+import { getAssociationMeta as getAssociations, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators';
 
 describe('@BelongsTo', () => {
   it('Adds association metadata of type "belongsTo" for later initialization', () => {
@@ -20,12 +10,11 @@ describe('@BelongsTo', () => {
     @BelongsTo(B)
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsTo',
       parameters: [B, {}],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Accepts parameters', () => {
@@ -37,12 +26,11 @@ describe('@BelongsTo', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsTo',
       parameters: [B, { as: 'b' }],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Can generate inverse association 1:1 (hasOne)', () => {
@@ -58,12 +46,12 @@ describe('@BelongsTo', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsTo',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'hasOne',
       parameters: [A, {}],
     }]);
@@ -82,12 +70,12 @@ describe('@BelongsTo', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsTo',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'hasMany',
       parameters: [A, {}],
     }]);
@@ -123,12 +111,12 @@ describe('@BelongsTo', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsTo',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'hasOne',
       parameters: [A, { as: 'a' }],
     }]);
@@ -143,12 +131,11 @@ describe('@HasOne', () => {
     @HasOne(B)
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasOne',
       parameters: [B, {}],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Accepts parameters', () => {
@@ -160,12 +147,11 @@ describe('@HasOne', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasOne',
       parameters: [B, { as: 'b' }],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Can generate inverse association (belongsTo)', () => {
@@ -180,12 +166,12 @@ describe('@HasOne', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasOne',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsTo',
       parameters: [A, { as: 'a' }],
     }]);
@@ -201,12 +187,12 @@ describe('@HasOne', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasOne',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsTo',
       parameters: [A, { as: 'a' }],
     }]);
@@ -221,12 +207,11 @@ describe('@BelongsToMany', () => {
     @BelongsToMany(B)
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsToMany',
       parameters: [B, {}],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Accepts parameters', () => {
@@ -239,15 +224,14 @@ describe('@BelongsToMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsToMany',
       parameters: [B, {
         as: 'b',
         through: 'a_to_b',
       }],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Can generate inverse association (belongsToMany)', () => {
@@ -266,7 +250,8 @@ describe('@BelongsToMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'belongsToMany',
       parameters: [B, {
         as: 'b',
@@ -274,9 +259,8 @@ describe('@BelongsToMany', () => {
         foreignKey: 'a_id',
         otherKey: 'b_id',
       }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsToMany',
       parameters: [A, {
         as: 'a',
@@ -299,15 +283,15 @@ describe('@BelongsToMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasMany',
       parameters: [B, {
         as: 'b',
         through: 'a_to_b',
       }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsTo',
       parameters: [A, {
         as: 'a',
@@ -325,12 +309,11 @@ describe('@HasMany', () => {
     @HasMany(B)
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasMany',
       parameters: [B, {}],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Accepts parameters', () => {
@@ -342,12 +325,11 @@ describe('@HasMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasMany',
       parameters: [B, { as: 'b' }],
     }]);
-
-    expect(getAssociations(B)).toEqual([]);
   });
 
   it('Can generate inverse association (belongsTo)', () => {
@@ -362,12 +344,12 @@ describe('@HasMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasMany',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsTo',
       parameters: [A, { as: 'a' }],
     }]);
@@ -383,12 +365,12 @@ describe('@HasMany', () => {
     })
     class A {}
 
-    expect(getAssociations(A)).toEqual([{
+    expect(getAssociations([A, B])).toEqual([{
+      model: A,
       type: 'hasMany',
       parameters: [B, { as: 'b' }],
-    }]);
-
-    expect(getAssociations(B)).toEqual([{
+    }, {
+      model: B,
       type: 'belongsTo',
       parameters: [A, { as: 'a' }],
     }]);
