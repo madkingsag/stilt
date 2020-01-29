@@ -11,6 +11,9 @@
   },
   "author": "",
   "license": "MIT",
+  "optionalDependencies": {
+    "@hapi/joi": "^17.1.0"
+  },
   "dependencies": {
     "@stilt/http": "^0.17.1",
     "@stilt/util": "^0.17.1",

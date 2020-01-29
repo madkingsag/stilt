@@ -5,15 +5,24 @@ import { isPlainObject } from '@stilt/util';
 import changeCase from 'change-case';
 import RestError from './RestError';
 
-function runValidation(paramName, paramValue, paramValidator, paramType, context, validationOpts, errorStatus) {
-  // TODO: currently Joi is hardcoded but I want it to be configurable in the future.
+let Joi;
 
+try {
+  // TODO: either force dep or move to top-level await + import()
+  Joi = require('@hapi/joi');
+} catch (ignore) { /* ignore */ }
+
+function runValidation(paramName, paramValue, paramValidator, paramType, context, validationOpts, errorStatus) {
   if (paramValidator == null) {
     return paramValue;
   }
 
-  if (!paramValidator.isJoi) {
-    throw new Error('[REST] Currently only Joi validation is supported in parameter decorators.');
+  if (!Joi || !Joi.isSchema) {
+    throw new Error('[REST] You need to install @hapi/joi >= 16 in order to use parameter validation');
+  }
+
+  if (!Joi.isSchema(paramValidator)) {
+    throw new Error('[REST] Only @hapi/joi >= 16 schemas are supported in parameter validation.');
   }
 
   const validation = paramValidator.validate(paramValue, validationOpts);
