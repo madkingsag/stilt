@@ -33,6 +33,7 @@ type Config = {
   databaseUri: string,
   models: string,
   debug?: boolean,
+  sequelizeOptions: Object, // TODO typing
 };
 
 export default class StiltSequelize {
@@ -63,6 +64,7 @@ export default class StiltSequelize {
       uri.username,
       uri.password,
       {
+        ...(this.config.sequelizeOptions || {}),
         host: uri.hostname,
         port: uri.port,
         dialect: uri.protocol.slice(0, -1),
