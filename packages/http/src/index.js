@@ -15,6 +15,8 @@ export { IContextProvider };
 
 const CONTEXT_MAP = new AsyncHookMap();
 
+// TODO: @disableBodyParser decorator
+
 export default class StiltHttp {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/http');
