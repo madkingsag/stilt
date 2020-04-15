@@ -22,6 +22,7 @@
     "fix-npm": "lerna exec -- rm -rf node_modules && rm package-lock.json && lerna bootstrap",
     "publish": "npm run build && lerna publish",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "install-all": "lerna exec npm ci && lerna link"
   }
 }
