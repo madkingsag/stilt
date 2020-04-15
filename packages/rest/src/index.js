@@ -171,8 +171,16 @@ export default class StiltRest {
       val = null;
     }
 
-    if (val && typeof val.pipe === 'function') {
-      return val;
+    if (val != null) {
+      // buffers & similar are returned raw
+      if (Buffer.isBuffer(val) || typeof val.pipe === 'function') {
+        return val;
+      }
+
+      // returning an error works too as an alternative to throwing
+      if (val[IsRestError]) {
+        return formatError(val, context);
+      }
     }
 
     return this.entityToJson(val)
