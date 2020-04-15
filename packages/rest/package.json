@@ -1,6 +1,6 @@
 {
   "name": "@stilt/rest",
-  "version": "0.18.0",
+  "version": "0.18.2",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "@hapi/joi": "^17.1.0"
   },
   "dependencies": {
-    "@stilt/http": "^0.18.0",
+    "@stilt/http": "^0.18.2",
     "@stilt/util": "^0.18.0",
     "change-case": "^3.1.0",
     "deep-freeze-strict": "^1.1.1",

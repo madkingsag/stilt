@@ -1,6 +1,6 @@
 {
   "name": "@stilt/sequelize",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "description": "Sequelize Wrapper for Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "sequelize": "^4.37.10"
   },
   "dependencies": {
-    "@stilt/core": "^0.18.0",
+    "@stilt/core": "^0.18.2",
     "@stilt/util": "^0.18.0",
     "async-hooks-map": "^1.2.0",
     "is-callable": "^1.1.4"
