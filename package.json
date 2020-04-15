@@ -1,18 +1,18 @@
 {
   "devDependencies": {
-    "@babel/cli": "^7.6.4",
-    "@babel/core": "^7.6.4",
-    "@babel/plugin-proposal-class-properties": "^7.5.5",
-    "@babel/plugin-proposal-decorators": "^7.6.0",
-    "@babel/plugin-transform-flow-strip-types": "^7.6.3",
-    "@babel/preset-env": "^7.6.3",
-    "@foobarhq/eslint-config": "^6.0.0",
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-decorators": "^7.8.3",
+    "@babel/plugin-transform-flow-strip-types": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
+    "@foobarhq/eslint-config": "^7.0.1",
     "babel-jest": "^24.9.0",
-    "eslint": "^6.5.1",
-    "flow-bin": "^0.110.0",
-    "flow-copy-source": "^2.0.8",
+    "eslint": "^6.8.0",
+    "flow-bin": "^0.122.0",
+    "flow-copy-source": "^2.0.9",
     "jest": "^24.9.0",
-    "lerna": "^3.18.3"
+    "lerna": "^3.20.2"
   },
   "scripts": {
     "build": "NODE_ENV=production npm run build:babel && npm run build:flow",
