@@ -4,10 +4,7 @@ import { AsyncHookMap } from 'async-hooks-map';
 import type { Sequelize, Transaction } from 'sequelize';
 
 // TODO: NODE > 10.x.x
-//  async-hooks-map broke in node 12 due to v8 changes
-//  but node >= 13.10 exposes a native version called AsyncLocalStorage in 'async_hooks'
-//  We'll have to skip node 12, update to node 14 instead (~october 2020)
-//  and replace this variable with the native variant
+//  use native version once available https://github.com/nodejs/node/pull/32318
 const ASYNC_MAP = new AsyncHookMap();
 
 const TRANSACTION_KEY = 'tr';
@@ -54,5 +51,10 @@ export function withTransaction<T>(sequelize: Sequelize, callback: (t: Transacti
  * @returns {Transaction | null} The transaction
  */
 export function getCurrentTransaction(): Transaction | null {
+  // ASYNC_MAP.get will throw otherwise
+  if (!ASYNC_MAP.current()) {
+    return null;
+  }
+
   return ASYNC_MAP.get(TRANSACTION_KEY) ?? null;
 }
