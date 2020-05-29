@@ -5,21 +5,20 @@ import cloneDeep from 'lodash/cloneDeep';
 import StiltHttp from '@stilt/http';
 import koaJwt from 'koa-jwt';
 import jwt from 'jsonwebtoken';
-import SessionProvider from './SessionProvider';
+import { SessionProvider, ISessionProvider } from './SessionProvider';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)
 // TODO cookie creation options
 
 export { withSession, WithSession } from './decorators';
+export { ISessionProvider };
+export type { SessionProvider };
 
 type Config = {
   secret: string,
   useCookies?: boolean | string,
 };
-
-export const ISessionProvider = Symbol('session-provider');
-export type { SessionProvider };
 
 export default class StiltJwtSessions {
 

@@ -1,8 +1,10 @@
 // @flow
 
-import type StiltJwt from './index';
+import type StiltJwt from '.';
 
-export default class SessionProvider {
+export const ISessionProvider = Symbol('session-provider');
+
+export class SessionProvider {
   constructor(stiltJwt: StiltJwt) {
     this.stiltJwt = stiltJwt;
   }

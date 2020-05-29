@@ -1,13 +1,13 @@
 // @flow
 
 import { makeControllerInjector } from '@stilt/http';
-import StiltJwtSessions from '.';
+import { ISessionProvider } from './SessionProvider';
 
 const withSession = makeControllerInjector({
-  run: (options, [jwtSessions]) => {
-    return ({ [options.key || 'session']: jwtSessions.getCurrentSession() });
+  run: (options, [provider]) => {
+    return ({ [options.key || 'session']: provider.getCurrentSession() });
   },
-  dependencies: [StiltJwtSessions],
+  dependencies: [ISessionProvider],
 });
 
 export {
