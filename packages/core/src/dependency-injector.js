@@ -27,6 +27,10 @@ export default class DependencyInjector {
   }
 
   async getInstance(Class: Function | string | Symbol) {
+    if (Class == null) {
+      throw new Error(`Trying to get instance of invalid identifier ${Class}`);
+    }
+
     const type = typeof Class;
 
     if (type === 'string' || type === 'symbol') {

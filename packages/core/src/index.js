@@ -44,6 +44,7 @@ export default class App {
     const promises = [...this._plugins.values()].map(plugin => {
       if (plugin[methodName]) {
         this.logger.debug(`Running ${methodName} on ${getName(plugin)}`);
+
         return plugin[methodName](this);
       }
 
