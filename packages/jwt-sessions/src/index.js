@@ -1,11 +1,10 @@
 // @flow
 
 import util from 'util';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 import StiltHttp from '@stilt/http';
 import koaJwt from 'koa-jwt';
 import jwt from 'jsonwebtoken';
-import { setCurrentInstance } from './decorators';
 import SessionProvider from './SessionProvider';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
@@ -52,8 +51,6 @@ export default class StiltJwtSessions {
     }));
 
     koa.use((ctx, next) => {
-      setCurrentInstance(this);
-
       const session = this.getSessionFromContext(ctx);
 
       // copy the session to be able to compare with mutable session

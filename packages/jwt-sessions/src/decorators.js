@@ -1,30 +1,16 @@
 // @flow
 
 import { makeControllerInjector } from '@stilt/http';
-import { AsyncHookMap } from 'async-hooks-map';
-
-const currentInstances = new AsyncHookMap();
-
-function setCurrentInstance(jwtModule) {
-  currentInstances.set('instance', jwtModule);
-}
-
-function getCurrentSession() {
-  const currentJwtModule = currentInstances.get('instance');
-  if (!currentJwtModule) {
-    return null;
-  }
-
-  return currentJwtModule.getCurrentSession();
-}
+import StiltJwtSessions from '.';
 
 const withSession = makeControllerInjector({
-  run: options => ({ [options.key || 'session']: getCurrentSession() }),
+  run: (options, [jwtSessions]) => {
+    return ({ [options.key || 'session']: jwtSessions.getCurrentSession() });
+  },
+  dependencies: [StiltJwtSessions],
 });
 
 export {
   withSession,
   withSession as WithSession,
-
-  setCurrentInstance,
 };

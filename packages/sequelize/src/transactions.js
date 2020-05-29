@@ -1,13 +1,9 @@
 // @flow
 
-import { AsyncHookMap } from 'async-hooks-map';
+import { AsyncLocalStorage } from 'async_hooks';
 import type { Sequelize, Transaction } from 'sequelize';
 
-// TODO: NODE > 10.x.x
-//  use native version once available https://github.com/nodejs/node/pull/32318
-const ASYNC_MAP = new AsyncHookMap();
-
-const TRANSACTION_KEY = 'tr';
+const asyncStore = new AsyncLocalStorage();
 
 /**
  * This works like {@link Sequelize#transaction}, but if this is called inside an active transaction,
@@ -33,13 +29,9 @@ export function withTransaction<T>(sequelize: Sequelize, callback: (t: Transacti
   }
 
   return sequelize.transaction(async newTransaction => {
-    ASYNC_MAP.set(TRANSACTION_KEY, newTransaction);
-
-    try {
-      return await callback(newTransaction);
-    } finally {
-      ASYNC_MAP.delete(TRANSACTION_KEY);
-    }
+    return asyncStore.run(newTransaction, () => {
+      return callback(newTransaction);
+    });
   });
 }
 
@@ -51,10 +43,5 @@ export function withTransaction<T>(sequelize: Sequelize, callback: (t: Transacti
  * @returns {Transaction | null} The transaction
  */
 export function getCurrentTransaction(): Transaction | null {
-  // ASYNC_MAP.get will throw otherwise
-  if (!ASYNC_MAP.current()) {
-    return null;
-  }
-
-  return ASYNC_MAP.get(TRANSACTION_KEY) ?? null;
+  return asyncStore.getStore() ?? null;
 }

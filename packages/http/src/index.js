@@ -1,11 +1,11 @@
 // @flow
 
+import { AsyncLocalStorage } from 'async_hooks';
 import Koa from 'koa';
 import Router from 'koa-better-router';
 import bodyParser from 'koa-bodyparser';
 import ip from 'ip';
 import chalk from 'chalk';
-import { AsyncHookMap } from 'async-hooks-map';
 import ContextProvider, { IContextProvider } from './ContextProvider';
 
 export { makeControllerInjector } from './controllerInjectors';
@@ -13,14 +13,13 @@ export { WithContext, withContext } from './WithContext';
 
 export { IContextProvider };
 
-const CONTEXT_MAP = new AsyncHookMap();
+const contextAsyncStorage = new AsyncLocalStorage();
 
 // TODO: @disableBodyParser decorator
 
 export default class StiltHttp {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/http');
-  _contextField = Symbol('context');
 
   _declaredEndpoints = [];
 
@@ -39,9 +38,9 @@ export default class StiltHttp {
     this.logger = app.makeLogger('http');
 
     this.koa.use((ctx, next) => {
-      CONTEXT_MAP.set(this._contextField, ctx);
-
-      return next();
+      return contextAsyncStorage.run(ctx, () => {
+        return next();
+      });
     });
 
     app.registerInjectables({
@@ -86,7 +85,7 @@ export default class StiltHttp {
    * @returns the context of the request that is currently being processed. Null if no request is being processed.
    */
   getCurrentContext() {
-    return CONTEXT_MAP.get(this._contextField);
+    return contextAsyncStorage.getStore();
   }
 
   /**
