@@ -15,6 +15,7 @@
     "@hapi/joi": "^17.1.0"
   },
   "dependencies": {
+    "@koa/multer": "^3.0.0",
     "@stilt/http": "^0.18.2",
     "@stilt/util": "^0.18.0",
     "change-case": "^3.1.0",

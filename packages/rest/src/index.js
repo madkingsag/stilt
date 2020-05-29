@@ -9,6 +9,8 @@ import { IsRestError } from './RestError';
 export * from './HttpMethodsDecorators';
 export { default as RestError, IsRestError } from './RestError';
 export { PathParams, QueryParams, BodyParams, PathParams as pathParams, QueryParams as queryParams, BodyParams as bodyParams } from './ParameterDecorators';
+export { Files } from './Multipart';
+export type { UploadedFile } from './Multipart';
 
 export interface JsonSerializer<T> {
   serialize(input: T): any | Promise<any>;
@@ -117,7 +119,7 @@ export default class StiltRest {
         }
 
         return null;
-      })
+      }),
     );
 
     const routeHandlers = [...apiClasses, ...apiInstances];
@@ -157,7 +159,7 @@ export default class StiltRest {
 
         return val.then(
           asyncVal => that._formatSuccess(asyncVal, context),
-          e => formatError(e, context)
+          e => formatError(e, context),
         );
       } catch (e) {
         return formatError(e, context);
