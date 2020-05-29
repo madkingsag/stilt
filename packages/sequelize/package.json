@@ -12,7 +12,7 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "sequelize": "^4.37.10"
+    "sequelize": "^5.21.11"
   },
   "dependencies": {
     "@stilt/core": "^0.18.2",
@@ -20,6 +20,6 @@
     "is-callable": "^1.1.4"
   },
   "devDependencies": {
-    "sequelize": "^4.37.10"
+    "sequelize": "^5.21.11"
   }
 }
