@@ -1,6 +1,6 @@
 {
   "name": "@stilt/sequelize",
-  "version": "0.19.0",
+  "version": "0.19.1",
   "description": "Sequelize Wrapper for Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "sequelize": "^5.21.11"
   },
   "dependencies": {
-    "@stilt/core": "^0.19.0",
+    "@stilt/core": "^0.19.1",
     "@stilt/util": "^0.19.0",
     "is-callable": "^1.1.4"
   },
