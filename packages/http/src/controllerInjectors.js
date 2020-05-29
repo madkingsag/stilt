@@ -1,34 +1,42 @@
 // @flow
 
-import { isPlainObject, hasOwnProperty } from '@stilt/util';
+import { isPlainObject } from '@stilt/util';
 
 const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
 
-type InjectorFactoryOptions = {
+type InjectorFactoryOptions<T> = {
   dependencies?: { [string]: string | Function },
-  run: (option: Object, dependencies?: Object[]) => { [string]: any },
+  run: (parameters: T, dependencies?: Object[]) => { [string]: any },
 };
 
-export function makeControllerInjector({ run: callback, dependencies }: InjectorFactoryOptions): Function {
+function addControllerInjector<T>(
+  Class: Function,
+  methodName: string,
+  parameterNum,
+  injector: InjectorFactoryOptions<T>,
+  injectorParams: T,
+) {
+  const injectorMeta = Class[CONTROLLER_INJECTORS] || new Map();
+  Class[CONTROLLER_INJECTORS] = injectorMeta;
 
-  return function createConfiguredDecorator(parameterNum: number, ...injectableOptions): Function {
+  if (!injectorMeta.has(methodName)) {
+    Class[CONTROLLER_INJECTORS].set(methodName, []);
+  }
 
-    return function decorateController(Class, methodName) {
+  injectorMeta.get(methodName).push({
+    parameterNum,
+    options: injectorParams,
+    valueProvider: injector.run,
+    dependencies: injector.dependencies,
+  });
+}
 
-      const injectorMeta = Class[CONTROLLER_INJECTORS] || new Map();
-      Class[CONTROLLER_INJECTORS] = injectorMeta;
+export function makeControllerInjector<T>(injector: InjectorFactoryOptions<T>): Function {
 
-      if (!injectorMeta.has(methodName)) {
-        Class[CONTROLLER_INJECTORS].set(methodName, []);
-      }
+  return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: T): Function {
 
-      injectorMeta.get(methodName).push({
-        parameterNum,
-        options: injectableOptions,
-        valueProvider: callback,
-
-        dependencies,
-      });
+    return function decorateController(Class: Function, methodName: string) {
+      addControllerInjector(Class, methodName, parameterNum, injector, injectorParameters);
     };
   };
 }
@@ -85,7 +93,7 @@ export function wrapControllerWithInjectors(
 
     await Promise.all(promises);
 
-    // eslint-disable-next-line no-invalid-this
+    // eslint-disable-next-line babel/no-invalid-this
     return wrappedMethod.apply(this, methodParameters);
   };
 }
