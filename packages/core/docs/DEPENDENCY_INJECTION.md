@@ -189,3 +189,98 @@ There are two ways to initialize injectables asynchronously:
         }
     }
     ```
+
+### Configurable Injectables & Factories
+
+If you need to configure an injectable, or want to create a reusable injectable that can be configured, you need to use factories.
+
+A caveat of factories is that you need to declare them to your app module before they can be injected.
+
+If we take the reusable module StiltSequelize, we cannot inject this module as-is as it needs to be configured 
+to specify the Database URI before it can be instantiated.
+
+We do this by calling `StiltSequelize.configure` which will return a factory.
+
+```javascript
+import { App } from '@stilt/core';
+import { StiltSequelize } from '@stilt/sequelize';
+
+async function bootstrap() {
+    const app = new App({ logLevel: 'info' });
+
+    // install all necessary plugins here.
+
+    // provide a configured sequelize module
+    app.use(StiltSequelize.configure({ databaseUri }));
+
+    return app.start();
+}
+```
+
+Note: in the case of this module, you can also pass a `runnable` to `.configure` to access other modules, such as a configuration module:
+
+```javascript
+import { App, runnable } from '@stilt/core';
+import { StiltSequelize } from '@stilt/sequelize';
+import ConfigService from '../config.service';
+
+async function bootstrap() {
+    // ...
+
+    app.use(StiltSequelize.configure(runnable({
+      run(configService) {
+        return {
+          databaseUri: configService.get('database.uri'),
+        }
+      },
+      dependencies: [ConfigService],
+    })));
+
+    // ...
+}
+```
+
+```javascript
+@Inject({
+    // requesting StiltSequelize will now provide a properly configured instance of it
+    stiltSequelize: StiltSequelize,
+    // similarly for extra modules provided by StiltSequelize
+    sequelize: Sequelize,
+})
+export default class UserService {}
+```
+
+If you need to create a factory yourself, they're also pretty straightforward. 
+Continuing with the example of StiltSequelize, let's replace `.configure` with our own factory function
+
+```javascript
+import { App, runnable, factory } from '@stilt/core';
+import { StiltSequelize } from '@stilt/sequelize';
+import ConfigService from '../config.service';
+
+async function bootstrap() {
+    // ...
+    
+    // configure version:
+    // app.use(StiltSequelize.configure(/* ... */));
+    
+    // our own factory version:
+    app.use(factory({
+      // This is a list of IDs that can be used in @Inject to access the instance provided by this factory.
+      ids: [StiltSequelize],
+      // build is a runnable, it can be async, and it must return the instance to use for StiltSequelize.
+      build: runnable({
+        run(configService) {
+          // note: normally asyncModuleInit is a private method
+          // that will init sequelize & resolve the StiltSequelize instance once finished
+          return StiltSequelize.asyncInit({ 
+            databaseUri: configService,
+          })    
+        },
+        dependencies: [ConfigService], 
+      })
+    }));
+    
+    // ...
+}
+```

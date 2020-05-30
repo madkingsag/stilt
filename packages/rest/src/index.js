@@ -16,6 +16,9 @@ export interface JsonSerializer<T> {
   serialize(input: T): any | Promise<any>;
 }
 
+// TODO: add .configure()
+//   move loadControllers to start() or asyncModuleInit()?
+
 export default class StiltRest {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/rest');

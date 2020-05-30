@@ -10,20 +10,20 @@ The simplest way to use Stilt core is to instantiate it directly, and apply plug
 
 ```javascript
 // bootstrap.js
-import Stilt from '@stilt/core';
-import StiltHttp from '@stilt/http';
-import StiltRest from '@stilt/rest';
+import { App } from '@stilt/core';
+import { StiltHttp } from '@stilt/http';
+import { StiltRest } from '@stilt/rest';
 
 async function bootstrap() {
-    const app = new Stilt({ logLevel: 'info' });
+    const app = new App({ logLevel: 'info' });
 
     // install all necessary plugins here.
 
     // enable HTTP server
-    app.use(new StiltHttp({ port: 8080 }));
+    app.use(StiltHttp.configure({ port: 8080 }));
 
     // enable REST endpoints on server
-    app.use(new StiltRest());
+    app.use(StiltRest.configure({}));
 
     await app.start();
 

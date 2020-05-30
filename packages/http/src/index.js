@@ -1,6 +1,7 @@
 // @flow
 
 import { AsyncLocalStorage } from 'async_hooks';
+import { App, isRunnable, factory, runnable, Runnable } from '@stilt/core';
 import Koa from 'koa';
 import Router from 'koa-better-router';
 import bodyParser from 'koa-bodyparser';
@@ -13,17 +14,50 @@ export { WithContext, withContext } from './WithContext';
 
 export { IContextProvider };
 
+type Config = {
+  port: number,
+}
+
+type IdentifierConfig = {
+  identifier?: string,
+  defaultModule?: boolean,
+};
+
 const contextAsyncStorage = new AsyncLocalStorage();
+const theSecret = Symbol('secret');
 
 // TODO: @disableBodyParser decorator
 
 export default class StiltHttp {
 
-  static MODULE_IDENTIFIER = Symbol('@stilt/http');
+  static configure(getConfig: Config | Runnable<Config>, identifierConfig?: IdentifierConfig) {
+    if (!isRunnable(getConfig)) {
+      getConfig = runnable(() => getConfig);
+    }
+
+    const identifiers = [
+      identifierConfig?.identifier ?? 'stilt-http',
+    ];
+
+    if (identifierConfig.defaultModule ?? true) {
+      identifiers.push(StiltHttp);
+    }
+
+    return factory({
+      ids: identifiers,
+      build: runnable((app, config) => {
+        return new StiltHttp(app, config, theSecret);
+      }, [App, getConfig]),
+    });
+  }
 
   _declaredEndpoints = [];
 
-  constructor(config) {
+  constructor(app: App, config: Config, secret: Symbol) {
+    if (secret !== theSecret) {
+      throw new Error('Do not instantiate StiltHttp yourself, use StiltHttp.configure()');
+    }
+
     this.port = config.port;
 
     this.koa = new Koa();
@@ -32,9 +66,7 @@ export default class StiltHttp {
     this.koa.use(bodyParser());
 
     this.router = Router().loadMethods();
-  }
 
-  init(app) {
     this.logger = app.makeLogger('http');
 
     this.koa.use((ctx, next) => {
@@ -43,9 +75,13 @@ export default class StiltHttp {
       });
     });
 
+    // TODO: drop ContextProvider, provide StiltHttp instead
     app.registerInjectables({
       [IContextProvider]: new ContextProvider(this),
     });
+
+    app.lifecycle.on('start', () => this.start());
+    app.lifecycle.on('close', () => this.close());
   }
 
   async start() {
