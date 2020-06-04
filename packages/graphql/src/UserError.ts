@@ -1,12 +1,10 @@
-// @flow
-
 import { addPostResolver } from './ResolveDecorator';
 
 export const IsUserError = Symbol('is-user-error');
 
 export class UserError extends Error {
 
-  _code: string;
+  private _code: string;
 
   constructor(msg: string) {
     super(msg);
@@ -16,6 +14,7 @@ export class UserError extends Error {
 
   withCode(code: string): UserError {
     this._code = code;
+
     return this;
   }
 

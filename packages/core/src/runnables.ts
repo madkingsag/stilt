@@ -14,14 +14,15 @@ export type Runnable<Return> = RunnableArgs<Return> & {
 export function runnable<Return>(
   run: (...deps: any[]) => Return,
   // dependencies which will be instantiated and passed to run.
-  dependencies: InjectableIdentifier[],
+  // and runnables to execute before this one
+  dependencies?: Array<Runnable<any> | InjectableIdentifier>,
 );
 
 export function runnable<Return>(args: RunnableArgs<Return>);
 
 export function runnable<Return>(
   run: ((...deps: any[]) => Return) | RunnableArgs<Return>,
-  dependencies?: InjectableIdentifier[],
+  dependencies?: Array<Runnable<any> | InjectableIdentifier>,
 ): Runnable<Return> {
   if (run == null) {
     throw new Error('runnable(): first argument is required');

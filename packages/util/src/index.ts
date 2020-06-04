@@ -1,14 +1,16 @@
-// @flow
-
 import assert from 'assert';
 import pathUtil from 'path';
 import glob from 'glob';
 
-export function hasOwnProperty(obj: Object, propertyKey: string): boolean {
+export function hasOwnProperty<X extends {}, Y extends PropertyKey>(
+  obj: X,
+  propertyKey: Y,
+): obj is X & Record<Y, unknown> {
+
   return Object.prototype.hasOwnProperty.call(obj, propertyKey);
 }
 
-export function isPlainObject(obj: Object) {
+export function isPlainObject(obj: any): obj is Object {
   const proto = Object.getPrototypeOf(obj);
 
   return proto == null || proto === Object.prototype;
@@ -35,7 +37,12 @@ export function asyncGlob(path: string, options: Object = {}): Promise<string[]>
   });
 }
 
-export function coalesce(...args) {
+asyncGlob.cwd = null;
+
+/**
+ * @returns the first non-nullish argument
+ */
+export function coalesce<T>(...args: T[]): T {
   assert(args.length > 0, 'Must have at least one argument');
 
   for (let i = 0; i < args.length - 1; i++) {
@@ -48,7 +55,10 @@ export function coalesce(...args) {
   return args[args.length - 1];
 }
 
-export async function awaitAllEntries(obj: Object): Object {
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+
+export async function awaitAllEntries<T extends { [key: string]: any },
+  >(obj: T): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> }> {
 
   const values = await Promise.all(Object.values(obj));
   const keys = Object.keys(obj);
@@ -63,10 +73,10 @@ export async function awaitAllEntries(obj: Object): Object {
   return resolvedObject;
 }
 
-export function mapObject(
-  obj: Object,
-  callback: (value: any, key: string) => any,
-): Object {
+export function mapObject<In, Out, T extends { [key: string]: In }>(
+  obj: T,
+  callback: (value: In, key: string) => Out,
+): { [P in keyof T]: Out } {
 
   const keys = Object.keys(obj);
   const newObject = Object.create(null);
@@ -76,4 +86,8 @@ export function mapObject(
   }
 
   return newObject;
+}
+
+export function assertIsFunction(item: any): asserts item is Function {
+  assert(typeof item === 'function');
 }

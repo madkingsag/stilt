@@ -14,13 +14,15 @@ export {
   AsyncModuleInit as asyncModuleInit,
 } from './dependency-injector';
 export { runnable, Runnable, isRunnable } from './runnables';
+export { factory, Factory, isFactory } from './factory';
+export { InjectableIdentifier } from './typing';
 
-type Logger = Console;
+export type Logger = Console;
 
 type Config = {
   cwd?: string,
   logLevel?: string,
-  injectables?: string,
+  // injectables?: string,
 };
 
 enum LifecycleEvents {
@@ -38,8 +40,8 @@ export class App {
   lifecycle = new AsyncEventEmitter();
   logger: Logger;
 
-  _dependencyInjector = new DependencyInjector();
-  _injectablesGlob;
+  private _dependencyInjector = new DependencyInjector();
+  // private _injectablesGlob;
 
   constructor(config: Config = {}) {
     asyncGlob.cwd = config.cwd;
@@ -47,13 +49,13 @@ export class App {
     const defaultLogLevel = config.logLevel || 'info';
 
     this.logger = this.makeLogger('core', { logLevel: defaultLogLevel });
-    this._injectablesGlob = config.injectables || '**/*.injectable.js';
+    // this._injectablesGlob = config.injectables || '**/*.injectable.js';
 
     // make StiltApp injectable
     this._dependencyInjector.registerInstance(App, this);
   }
 
-  makeLogger(_namespace: string, _config) {
+  makeLogger(_namespace: string, _config?: any) {
     // TODO use actual logger & namespace it.
     return console;
   }
@@ -114,7 +116,9 @@ export class App {
   instantiate<T>(classList: Array<InjectableIdentifier>): Promise<T[]>;
   instantiate<T>(classList: { [key: string]: InjectableIdentifier }): Promise<{ [key: string]: T }>;
 
-  instantiate<T>(aClass: InjectableIdentifier | Array<InjectableIdentifier> | { [key: string]: InjectableIdentifier }): Promise<T | T[] | { [key: string]: T }> {
+  instantiate<T>(
+    aClass: InjectableIdentifier | Array<InjectableIdentifier> | { [key: string]: InjectableIdentifier },
+  ): Promise<T | T[] | { [key: string]: T }> {
     // @ts-ignore
     return this._dependencyInjector.getInstances(aClass);
   }

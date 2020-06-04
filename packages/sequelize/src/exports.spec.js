@@ -1,6 +1,6 @@
 // @flow
 
-import * as seqExports from './';
+import * as seqExports from '.';
 
 describe('@stilt/sequelize', () => {
 
@@ -35,7 +35,7 @@ describe('@stilt/sequelize', () => {
   });
 
   it('Exports StiltSequelize', () => {
-    expect(seqExports.default).toBeDefined();
-    expect(seqExports.default.name).toEqual('StiltSequelize');
+    expect(seqExports.StiltSequelize).toBeDefined();
+    expect(seqExports.StiltSequelize.name).toEqual('StiltSequelize');
   });
 });

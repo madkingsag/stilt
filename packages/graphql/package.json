@@ -11,6 +11,10 @@
   },
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
+  "types": "types",
+  "devDependencies": {
+    "@stilt/core": "^0.19.1"
+  },
   "dependencies": {
     "@stilt/http": "^0.19.0",
     "@stilt/util": "^0.19.0",

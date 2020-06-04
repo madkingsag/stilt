@@ -1,6 +1,5 @@
-// @flow
-
-import { set as setProperty } from 'lodash';
+import { assertIsFunction } from '@stilt/util';
+import setProperty from 'lodash/set';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 
 const Meta = Symbol('graphql-meta');
@@ -47,7 +46,11 @@ function withGraphqlQuery(paramNum: number): Function {
 }
 
 // TODO don't expose addPostResolver yet, need research on how to add hooks to this API.
-export function addPostResolver(Class: Function, methodName: string, callback: (?Error, ?mixed) => mixed) {
+export function addPostResolver(
+  Class: Function,
+  methodName: string,
+  callback: (err: Error | null, data: any | null) => any,
+) {
 
   const resolverOptions = getSetMeta(Class, methodName);
 
@@ -64,7 +67,7 @@ export function addPostResolver(Class: Function, methodName: string, callback: (
  * @param func The function on which the metadata has been attached
  * @return {RoutingMetadata} The routing metadata
  */
-function getResolverMetadata(func: Function): ?ResolverClassMetadata {
+function getResolverMetadata(func: Function): ResolverClassMetadata | void {
   if (func == null || !func[Meta]) {
     return null;
   }
@@ -88,7 +91,9 @@ export function classToResolvers(Class: Function | Object, stiltApp): Object {
     }
   }
 
-  const meta: ?ResolverClassMetadata = getResolverMetadata(Class);
+  assertIsFunction(Class);
+
+  const meta: ResolverClassMetadata | void = getResolverMetadata(Class);
   if (!meta) {
     return {};
   }

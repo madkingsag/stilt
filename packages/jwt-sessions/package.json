@@ -25,6 +25,7 @@
     "url": "https://github.com/madkingsag/stilt/issues"
   },
   "homepage": "https://github.com/madkingsag/stilt#readme",
+  "types": "types",
   "dependencies": {
     "@stilt/http": "^0.19.0",
     "jsonwebtoken": "^8.3.0",

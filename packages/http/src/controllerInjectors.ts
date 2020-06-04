@@ -1,13 +1,18 @@
-// @flow
-
 import type { App } from '@stilt/core';
 import { isPlainObject } from '@stilt/util';
 
 const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
 
 type InjectorFactoryOptions<T> = {
-  dependencies?: { [string]: string | Function },
-  run: (parameters: T, dependencies?: Object[]) => { [string]: any },
+  dependencies?: { [key: string]: string | Function | symbol } | Array<string | Function | symbol>,
+  run: (parameters: T[], dependencies?: any[]) => { [key: string]: any },
+};
+
+type InjectorMeta<Arg> = {
+  parameterNum: number,
+  options: any,
+  valueProvider: InjectorFactoryOptions<Arg>['run'],
+  dependencies: InjectorFactoryOptions<Arg>['dependencies']
 };
 
 function addControllerInjector<T>(
@@ -15,7 +20,7 @@ function addControllerInjector<T>(
   methodName: string,
   parameterNum,
   injector: InjectorFactoryOptions<T>,
-  injectorParams: T,
+  injectorParams: T[],
 ) {
   const injectorMeta = Class[CONTROLLER_INJECTORS] || new Map();
   Class[CONTROLLER_INJECTORS] = injectorMeta;
@@ -34,7 +39,7 @@ function addControllerInjector<T>(
 
 export function makeControllerInjector<T>(injector: InjectorFactoryOptions<T>): Function {
 
-  return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: T): Function {
+  return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: T[]): Function {
 
     return function decorateController(Class: Function, methodName: string) {
       addControllerInjector(Class, methodName, parameterNum, injector, injectorParameters);
@@ -58,7 +63,7 @@ export function wrapControllerWithInjectors(
     return wrappedMethod;
   }
 
-  const injectorsMetaList: Array = injectorsMetaMap
+  const injectorsMetaList: Array<InjectorMeta<any>> = injectorsMetaMap
     .get(methodName)
 
     // get the instance of all declared dependencies.

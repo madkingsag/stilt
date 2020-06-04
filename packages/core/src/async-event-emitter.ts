@@ -1,7 +1,9 @@
 import EventEmitter from 'events';
 
+// @ts-ignore
 export class AsyncEventEmitter extends EventEmitter {
   async emit(type, ...args) {
+    // @ts-ignore
     const handlers = this._events[type];
     const isArray = Array.isArray(handlers);
     if (!isArray && typeof handlers !== 'function') {

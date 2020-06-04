@@ -1,11 +1,9 @@
-// @flow
-
 import ContextProvider, { IContextProvider } from './ContextProvider';
 import { makeControllerInjector } from './controllerInjectors';
 
 export const WithContext = makeControllerInjector({
-  dependencies: { contextProvider: IContextProvider },
-  run(ignore, { contextProvider }: { contextProvider: ContextProvider }) {
+  dependencies: [IContextProvider],
+  run(_config, [contextProvider]: [ContextProvider]) {
     return { context: contextProvider.getCurrentContext() };
   },
 });

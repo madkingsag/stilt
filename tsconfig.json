@@ -17,7 +17,8 @@
     "baseUrl": "./app",
     "lib": ["es2015", "es2016", "es2017", "es2018", "dom", "esnext", "dom.iterable"],
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "emitDeclarationOnly": true
   },
   "include": [
     "packages/**/src/**/*"

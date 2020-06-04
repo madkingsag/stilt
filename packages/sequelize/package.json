@@ -11,6 +11,7 @@
   },
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
+  "types": "types",
   "peerDependencies": {
     "sequelize": "^5.21.11"
   },
