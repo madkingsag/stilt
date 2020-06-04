@@ -1,5 +1,6 @@
 // @flow
 
+import type { App } from '@stilt/core';
 import { isPlainObject } from '@stilt/util';
 
 const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
@@ -41,27 +42,15 @@ export function makeControllerInjector<T>(injector: InjectorFactoryOptions<T>): 
   };
 }
 
-function instantiateDependencyTable(stiltApp, table) {
-
-  const promises = [];
-  const resolvedDependencies = Object.create(null);
-
-  for (const [key, value] of Object.entries(table)) {
-    const dependencyPromise = stiltApp.instantiate(value);
-
-    dependencyPromise.then(resolvedDep => {
-      resolvedDependencies[key] = resolvedDep;
-    });
-  }
-
-  return Promise.all(promises).then(() => resolvedDependencies);
+function instantiateDependencyTable(stiltApp: App, table) {
+  return stiltApp.instantiate(table);
 }
 
 export function wrapControllerWithInjectors(
   Class: Function,
   methodName: string,
   wrappedMethod: Function,
-  stiltApp
+  stiltApp,
 ): Function {
 
   const injectorsMetaMap = Class[CONTROLLER_INJECTORS];
