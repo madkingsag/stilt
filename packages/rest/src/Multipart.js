@@ -30,9 +30,9 @@ export const Files = makeControllerInjector({
 
     if (typeof fileConfigs === 'string') {
       const middleware = multer.any();
-      const { files } = await middleware(context, val => val);
+      await middleware(context, val => val);
 
-      return { [fileConfigs]: files };
+      return { [fileConfigs]: context.files };
     }
 
     const keys = Object.keys(fileConfigs);
@@ -54,7 +54,8 @@ export const Files = makeControllerInjector({
 
     let files;
     try {
-      files = (await middleware(context, val => val)).files;
+      await middleware(context, val => val);
+      files = context.files;
     } catch (e) {
       if (e.code === 'LIMIT_UNEXPECTED_FILE') {
         const validFields = keys.map(key => fileConfigs[key]?.field ?? key);
