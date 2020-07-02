@@ -2,7 +2,6 @@
 
 import { makeControllerInjector, IContextProvider, type ContextProvider } from '@stilt/http';
 import { isPlainObject } from '@stilt/util';
-import changeCase from 'change-case';
 import RestError from './RestError';
 
 let Joi;
@@ -12,7 +11,7 @@ try {
   Joi = require('@hapi/joi');
 } catch (ignore) { /* ignore */ }
 
-function runValidation(paramName, paramValue, paramValidator, paramType, context, validationOpts, errorStatus) {
+function runValidation(paramValue, paramValidator, parameterSource, context, validationOpts, errorStatus) {
   if (paramValidator == null) {
     return paramValue;
   }
@@ -30,9 +29,13 @@ function runValidation(paramName, paramValue, paramValidator, paramType, context
   if (validation.error) {
     const validationError = validation.error;
 
-    throw new RestError(`Invalid ${paramType} parameter ${JSON.stringify(paramName)} in ${JSON.stringify(context.route.route)}: ${validationError.message} (got ${JSON.stringify(paramValue)})`)
+    throw new RestError(`[${context.route.route}] Invalid ${parameterSource} input: ${validationError.message} (got ${JSON.stringify(validationError.details[0].context.value)})`)
       .withStatus(errorStatus)
-      .withCode(`INVALID_${changeCase.constantCase(paramName)}`);
+      .withCode(`BAD_INPUT`)
+      .withPath([
+        parameterSource, // part of the request in which the parameter is found (body, query, path, header)
+        ...validationError.details[0].path,
+      ]);
   }
 
   return validation.value;
@@ -57,6 +60,7 @@ function makeParameterInjector(factoryOptions) {
         return null;
       }
 
+      // array of string, equivalent to Joi.object() where all provided keys are "any"
       if (Array.isArray(validators)) {
 
         if (typeof rawParametersBag !== 'object' || rawParametersBag === null) {
@@ -71,28 +75,20 @@ function makeParameterInjector(factoryOptions) {
         return outputKey ? { [outputKey]: parsedParameters } : parsedParameters;
       }
 
+      // a plain object - convert to Joi.object and use the plain object as config
       if (isPlainObject(validators)) {
-        const parsedParameters = Object.create(null);
-
-        for (const [paramName, paramValidator] of Object.entries(validators)) {
-
-          const rawParameter = rawParametersBag[paramName];
-
-          parsedParameters[paramName] = runValidation(
-            paramName,
-            rawParameter,
-            paramValidator,
-            factoryOptions.name,
-            context,
-            validationOptions,
-            factoryOptions.errorStatus,
-          );
-        }
-
-        return outputKey ? { [outputKey]: parsedParameters } : parsedParameters;
+        validators = Joi.object(validators);
       }
 
-      const parsedBag = runValidation(`<${factoryOptions.name}>`, rawParametersBag, validators, '', context, validationOptions, factoryOptions.errorStatus);
+      const parsedBag = runValidation(
+        rawParametersBag,
+        validators,
+        factoryOptions.name,
+        context,
+        validationOptions,
+        factoryOptions.errorStatus,
+      );
+
       if (outputKey || !isPlainObject(parsedBag)) {
         return { [outputKey || factoryOptions.name]: parsedBag };
       }
