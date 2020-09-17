@@ -1,5 +1,3 @@
-// @flow
-
 import deepFreeze from 'deep-freeze-strict';
 
 const Meta = Symbol('rest-routing-meta');
@@ -43,7 +41,7 @@ function makeHttpMethod(httpMethod): Function {
  * @param func The function on which the metadata has been attached
  * @return {RoutingMetadata} The routing metadata
  */
-export function getRoutingMetadata(func: Function): ?RoutingMetadata {
+export function getRoutingMetadata(func: Function): RoutingMetadata | null {
   if (func == null || !func[Meta]) {
     return null;
   }
@@ -53,7 +51,7 @@ export function getRoutingMetadata(func: Function): ?RoutingMetadata {
   // TODO move deepFreeze to finalizer (once new decorators are available).
   deepFreeze(meta);
 
-  return meta;
+  return meta ?? null;
 }
 
 /**

@@ -17,10 +17,12 @@
   },
   "dependencies": {
     "@koa/multer": "^3.0.0",
+    "@stilt/core": "^0.19.0",
     "@stilt/http": "^0.19.0",
     "@stilt/util": "^0.19.0",
     "change-case": "^3.1.0",
     "deep-freeze-strict": "^1.1.1",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "multer": "^1.4.2"
   }
 }

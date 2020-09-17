@@ -1,8 +1,8 @@
-// @flow
-
+import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
+import type { Class } from '@stilt/core/types/typing';
 import StiltHttp from '@stilt/http';
-import { asyncGlob } from '@stilt/util';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
+import { asyncGlob } from '@stilt/util';
 import { getRoutingMetadata } from './HttpMethodsDecorators';
 import { IsRestError } from './RestError';
 
@@ -16,32 +16,75 @@ export interface JsonSerializer<T> {
   serialize(input: T): any | Promise<any>;
 }
 
-// TODO: add .configure()
-//   move loadControllers to start() or asyncModuleInit()?
+type IdentifierConfig = {
+  /**
+   * If specified, defines the key to use to inject this module dependency.
+   * Defaults to 'stilt-graphql'
+   */
+  identifier?: string,
+
+  /**
+   * If true, the StiltGraphQl class will be usable as identifier to inject this module as a dependency,
+   */
+  defaultModule?: boolean,
+};
+
+type Config = {
+  controllers?: string,
+}
+
+const theSecret = Symbol('secret');
 
 export default class StiltRest {
 
-  static MODULE_IDENTIFIER = Symbol('@stilt/rest');
-  serializers: Map<Function, JsonSerializer<*>> = new Map();
+  static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
+    const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
-  constructor(config = {}) {
-    this._controllersGlob = config.controllers || '**/*.rest.js';
+    const identifiers: Array<InjectableIdentifier> = [
+      identifierConfig?.identifier ?? 'stilt-rest',
+    ];
+
+    if (identifierConfig?.defaultModule ?? true) {
+      identifiers.push(StiltRest);
+    }
+
+    return factory({
+      ids: identifiers,
+      // Extra modules being registered by this factory. They must be declared before the end of the constructor.
+      // The value can be a promise if the initialisation is async
+      build: runnable(async (app: App, stiltHttp: StiltHttp, resolvedConfig: Config) => {
+        const schemaGlob = resolvedConfig.controllers || '**/*.rest.js';
+
+        const controllers = await this.loadControllers(app, schemaGlob);
+
+        return new StiltRest(app, stiltHttp, controllers, theSecret);
+      }, [App, StiltHttp, getConfig]),
+    });
   }
 
-  async init(app) {
-    this._app = app;
+  private readonly serializers: Map<Function, JsonSerializer<any>> = new Map();
+  private readonly app: App;
+  public readonly stiltHttp: StiltHttp;
 
-    this.logger = app.makeLogger('rest');
+  constructor(app: App, stiltHttp: StiltHttp, controllers, secret: Symbol) {
+    if (secret !== theSecret) {
+      throw new Error('You\'re trying to instantiate StiltRest incorrectly.\n'
+        + '=> If you\'re trying to instantiate it by doing new StiltRest(), call StiltRest.configure(config) & pass the returned module to App.use instead.\n'
+        + '=> If you\'re injecting this module through @Inject or similar, make sure this module was registered through App.use(StiltRest.configure(config))');
+    }
 
-    this.server = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
-    await this._loadControllers();
+    this.stiltHttp = stiltHttp;
+    this.app = app;
+
+    for (const controller of controllers) {
+      this.stiltHttp.registerRoute(controller.method, controller.path, this._wrapError(controller.handler));
+    }
   }
 
-  async addEntitySerializer(Class: Function, serializer: JsonSerializer) {
+  async addEntitySerializer(entityClass: Function, serializer: Class<JsonSerializer<any>>): Promise<void> {
+    const serializerInstance: JsonSerializer<any> = await this.app.instantiate(serializer);
 
-    const serializerInstance = await this._app.instantiate(serializer);
-
-    this.serializers.set(Class.prototype, serializerInstance);
+    this.serializers.set(entityClass.prototype, serializerInstance);
   }
 
   async entityToJson(entity: any) {
@@ -98,10 +141,8 @@ export default class StiltRest {
     return this.getSerializer(proto);
   }
 
-  async _loadControllers() {
-    this.logger.debug(`loading all controllers matching ${this._controllersGlob}`);
-
-    const controllers = await asyncGlob(this._controllersGlob);
+  private static async loadControllers(app: App, schemaGlob: string) {
+    const controllers = await asyncGlob(schemaGlob);
 
     const apiClasses = [];
     for (const controllerPath of Object.values(controllers)) {
@@ -118,7 +159,7 @@ export default class StiltRest {
     const apiInstances = await Promise.all(
       apiClasses.map(resolverClass => {
         if (typeof resolverClass === 'function') {
-          return this._app.instantiate(resolverClass);
+          return app.instantiate(resolverClass);
         }
 
         return null;
@@ -127,25 +168,32 @@ export default class StiltRest {
 
     const routeHandlers = [...apiClasses, ...apiInstances];
 
-    for (const Class of routeHandlers) {
-      const routingMetaList = getRoutingMetadata(Class);
+    const controllerModules = [];
+    for (const theClass of routeHandlers) {
+      const routingMetaList = getRoutingMetadata(theClass);
       if (!routingMetaList) {
         continue;
       }
 
       for (const routingMeta of routingMetaList) {
         const methodName = routingMeta.handlerName;
-        const classMethod = Class[methodName];
+        const classMethod = theClass[methodName];
         const routeHandler = wrapControllerWithInjectors(
-          Class,
+          theClass,
           methodName,
-          classMethod.bind(Class),
-          this._app,
+          classMethod.bind(theClass),
+          app,
         );
 
-        this.server.registerRoute(routingMeta.httpMethod, routingMeta.path, this._wrapError(routeHandler));
+        controllerModules.push({
+          method: routingMeta.httpMethod,
+          path: routingMeta.path,
+          handler: routeHandler,
+        });
       }
     }
+
+    return controllerModules;
   }
 
   _wrapError(callback: Function) {

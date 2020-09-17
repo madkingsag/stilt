@@ -76,6 +76,11 @@ export const Files = makeControllerInjector({
       throw e;
     }
 
+    // this happens if the front doesn't send anything
+    if (files == null) {
+      return {};
+    }
+
     for (const field of Object.keys(files)) {
       let key = field;
       if (aliases[field]) {

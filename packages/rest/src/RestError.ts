@@ -1,5 +1,3 @@
-// @flow
-
 export const IsRestError = Symbol('is-rest-error');
 
 export default class RestError extends Error {
