@@ -1,6 +1,6 @@
-import { assertIsFunction } from '@stilt/util';
-import setProperty from 'lodash/set';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
+import { assertIsFunction, isPlainObject } from '@stilt/util';
+import setProperty from 'lodash/set';
 
 const Meta = Symbol('graphql-meta');
 
@@ -77,23 +77,18 @@ function getResolverMetadata(func: Function): ResolverClassMetadata | void {
   return meta;
 }
 
-export function classToResolvers(Class: Function | Object, stiltApp): Object {
+export function classToResolvers(classOrInstance: Function | Object, stiltApp): Object {
   // non objects should map to nothing
-  if (Class === null || (typeof Class !== 'object' && typeof Class !== 'function')) {
+  if (classOrInstance === null || (typeof classOrInstance !== 'object' && typeof classOrInstance !== 'function')) {
     return {};
   }
 
   // POJOs should be used as-is
-  if (typeof Class === 'object') {
-    const proto = Object.getPrototypeOf(Class);
-    if (proto === null || proto === Object.prototype) {
-      return Class;
-    }
+  if (isPlainObject(classOrInstance)) {
+    return classOrInstance;
   }
 
-  assertIsFunction(Class);
-
-  const meta: ResolverClassMetadata | void = getResolverMetadata(Class);
+  const meta: ResolverClassMetadata | void = getResolverMetadata(classOrInstance);
   if (!meta) {
     return {};
   }
@@ -103,11 +98,11 @@ export function classToResolvers(Class: Function | Object, stiltApp): Object {
   meta.forEach((options: ResolverOptions, methodName: string) => {
 
     const method = normalizeFunction(
-      Class,
+      classOrInstance,
       wrapControllerWithInjectors(
-        Class,
+        classOrInstance,
         methodName,
-        Class[methodName],
+        classOrInstance[methodName],
         stiltApp,
       ),
       options,

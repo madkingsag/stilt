@@ -55,8 +55,6 @@ const theSecret = Symbol('secret');
 
 export default class StiltGraphQl {
 
-  static MODULE_IDENTIFIER = Symbol('@stilt/graphql');
-
   static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
