@@ -1,6 +1,6 @@
 import util from 'util';
 import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable, Factory } from '@stilt/core';
-import StiltHttp from '@stilt/http';
+import StiltHttp, { makeControllerInjector } from '@stilt/http';
 import jwt from 'jsonwebtoken';
 import koaJwt, { Options as KoaJwtOptions } from 'koa-jwt';
 import cloneDeep from 'lodash/cloneDeep';
@@ -8,8 +8,6 @@ import cloneDeep from 'lodash/cloneDeep';
 // TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)
 // TODO cookie creation options
-
-export { withSession, WithSession } from './decorators';
 
 const theSecret = Symbol('secret');
 
@@ -141,3 +139,19 @@ export default class StiltJwtSessions {
     return this.getSessionFromContext(context);
   }
 }
+
+type WithSessionOptions = {
+  key?: string,
+}
+
+const withSession = makeControllerInjector({
+  dependencies: [StiltJwtSessions],
+  run([options]: [WithSessionOptions], [provider]: [StiltJwtSessions]) {
+    return ({ [options?.key ?? 'session']: provider.getCurrentSession() });
+  },
+});
+
+export {
+  withSession,
+  withSession as WithSession,
+};
