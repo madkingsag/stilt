@@ -1,7 +1,7 @@
 import {
   asyncGlob,
 } from '@stilt/util';
-import { AsyncEventEmitter } from './async-event-emitter';
+import Emittery from 'emittery';
 import DependencyInjector from './dependency-injector';
 import { Factory } from './factory';
 import { TRunnable } from './runnables';
@@ -22,7 +22,6 @@ export type Logger = Console;
 type Config = {
   cwd?: string,
   logLevel?: string,
-  // injectables?: string,
 };
 
 enum LifecycleEvents {
@@ -30,15 +29,11 @@ enum LifecycleEvents {
   CLOSE = 'close',
 }
 
-// TODO:
-// - replace module.init with asyncInit if it's a class, or with async runnable if factory
-
 export class App {
 
   static LifecycleEvents = LifecycleEvents;
 
-  lifecycle = new AsyncEventEmitter();
-  logger: Logger;
+  public readonly lifecycle = new Emittery();
 
   private _dependencyInjector = new DependencyInjector();
   // private _injectablesGlob;
@@ -46,10 +41,8 @@ export class App {
   constructor(config: Config = {}) {
     asyncGlob.cwd = config.cwd;
 
-    const defaultLogLevel = config.logLevel || 'info';
-
-    this.logger = this.makeLogger('core', { logLevel: defaultLogLevel });
-    // this._injectablesGlob = config.injectables || '**/*.injectable.js';
+    // const defaultLogLevel = config.logLevel || 'info';
+    // this.logger = this.makeLogger('core', { logLevel: defaultLogLevel });
 
     // make StiltApp injectable
     this._dependencyInjector.registerInstance(App, this);
@@ -75,29 +68,13 @@ export class App {
     await this.lifecycle.emit(LifecycleEvents.CLOSE);
   }
 
-  // async _findInjectables() {
-  //   const injectableFiles = await asyncGlob(this._injectablesGlob);
-  //
-  //   const declarations = injectableFiles.map(file => {
-  //     const module = require(file);
-  //     if (module.default) {
-  //       return module.default();
-  //     }
-  //
-  //     return module();
-  //   });
-  //
-  //   for (const declaration of declarations) {
-  //     this._dependencyInjector.registerModuleIds(declaration);
-  //   }
-  // }
-
   async executeRunnable<Return>(runnable: TRunnable<Return>): Promise<Return> {
     return this._dependencyInjector.executeRunnable(runnable);
   }
 
-  use(aClass: InjectableIdentifier | Factory<any>) {
-    return this.instantiate(aClass);
+  use<T>(module: InjectableIdentifier | Factory<T>): Promise<T> {
+    // @ts-ignore
+    return this.instantiate(module);
   }
 
   register<T>(moduleFactory: Factory<T>): void {
@@ -108,19 +85,16 @@ export class App {
     return this._dependencyInjector.registerInstance(identifier, instance);
   }
 
-  // registerInstances(map) {
-  //   return this._dependencyInjector.registerModuleIds(map);
-  // }
-
-  instantiate<T>(classList: InjectableIdentifier): Promise<T>;
-  instantiate<T>(classList: Array<InjectableIdentifier>): Promise<T[]>;
-  instantiate<T>(classList: { [key: string]: InjectableIdentifier }): Promise<{ [key: string]: T }>;
-
-  instantiate<T>(
-    aClass: InjectableIdentifier | Array<InjectableIdentifier> | { [key: string]: InjectableIdentifier },
-  ): Promise<T | T[] | { [key: string]: T }> {
+  instantiate<T>(moduleFactory: Factory<T>): Promise<T>;
+  instantiate<T>(runnable: TRunnable<T>): Promise<T>;
+  instantiate<T>(moduleIdentifier: InjectableIdentifier): Promise<T>;
+  instantiate<T>(moduleArray: Array<InjectableIdentifier | Factory<T>>): Promise<T[]>;
+  instantiate<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> }): Promise<{ [key: string]: T }>;
+  instantiate<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier
+    | Array<InjectableIdentifier | Factory<T> | TRunnable<T>>
+    | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
     // @ts-ignore
-    return this._dependencyInjector.getInstances(aClass);
+    return this._dependencyInjector.getInstances(moduleFactory);
   }
 
   static async createApp(
@@ -132,8 +106,3 @@ export class App {
     return app.instantiate(InitModule);
   }
 }
-
-// function getName(obj) {
-//   return (obj && obj.constructor && obj.constructor.name) || String(obj);
-// }
-

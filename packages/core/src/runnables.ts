@@ -4,7 +4,7 @@ const IsRunnable = Symbol('is-runnable');
 
 export type RunnableArgs<Return> = {
   run: (...deps: any[]) => Return,
-  dependencies: InjectableIdentifier[],
+  dependencies: Array<TRunnable<any> | InjectableIdentifier>,
 };
 
 export type TRunnable<Return> = RunnableArgs<Return> & {

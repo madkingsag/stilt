@@ -46,10 +46,12 @@ export default class DependencyInjector {
   getInstances<T>(moduleFactory: Factory<T>): Promise<T>;
   getInstances<T>(runnable: TRunnable<T>): Promise<T>;
   getInstances<T>(moduleIdentifier: InjectableIdentifier): Promise<T>;
-  getInstances<T>(moduleArray: Array<InjectableIdentifier | Factory<T>>): Promise<T[]>;
-  getInstances<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> }): Promise<{ [key: string]: T }>;
+  getInstances<T>(moduleArray: Array<InjectableIdentifier | Factory<T> | TRunnable<T>>): Promise<T[]>;
+  getInstances<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<{ [key: string]: T }>;
 
-  getInstances<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier | Array<InjectableIdentifier | Factory<T> | TRunnable<T>> | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
+  getInstances<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier
+    | Array<InjectableIdentifier | Factory<T> | TRunnable<T>>
+    | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
 
     if (moduleFactory == null) {
       throw new Error(`getInstances: received parameter is null`);
@@ -140,7 +142,7 @@ export default class DependencyInjector {
 
     const instances = await this.getInstances(runnable.dependencies);
 
-    if (Array.isArray(runnable.dependencies)) {
+    if (Array.isArray(instances)) {
       return run(...instances);
     }
 
