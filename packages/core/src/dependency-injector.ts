@@ -70,8 +70,13 @@ export default class DependencyInjector {
 
     if (typeof moduleFactory === 'object' && isPlainObject(moduleFactory)) {
       return awaitAllEntries(
-        mapObject(moduleFactory, (ClassItem: Factory<T> | TRunnable<T> | InjectableIdentifier) => {
-          return this.getInstance<T>(ClassItem);
+        mapObject(moduleFactory, async (ClassItem: Factory<T> | TRunnable<T> | InjectableIdentifier, key: string) => {
+          try {
+            return await this.getInstance<T>(ClassItem);
+          } catch (e) {
+            // TODO: use .causedBy
+            throw new Error(`Failed to build ${key}: \n ${e.message}`);
+          }
         }),
       );
     }
@@ -140,7 +145,13 @@ export default class DependencyInjector {
       return run();
     }
 
-    const instances = await this.getInstances(runnable.dependencies);
+    let instances;
+    try {
+      instances = await this.getInstances(runnable.dependencies);
+    } catch (e) {
+      // TODO use .causedBy
+      throw new Error(`Error while instantiating a Runnable's dependencies: \n ${e.message}`);
+    }
 
     if (Array.isArray(instances)) {
       return run(...instances);
@@ -156,8 +167,13 @@ export default class DependencyInjector {
     const constructorArgs = [];
 
     if (initMeta.dependencies) {
-      const dependencies = await this.getInstances(initMeta.dependencies);
-      constructorArgs.push(dependencies);
+      try {
+        const dependencies = await this.getInstances(initMeta.dependencies);
+        constructorArgs.push(dependencies);
+      } catch (e) {
+        // TODO use .causedBy
+        throw new Error(`Error while instantiating class ${aClass.name}'s dependencies: \n ${e.message}`);
+      }
     }
 
     let instance;
