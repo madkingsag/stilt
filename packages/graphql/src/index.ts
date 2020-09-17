@@ -1,13 +1,13 @@
-import path from 'path';
 import fs from 'fs';
-import { Runnable, App, factory, isRunnable, runnable, InjectableIdentifier } from '@stilt/core';
+import path from 'path';
+import { TRunnable, App, factory, isRunnable, runnable, InjectableIdentifier } from '@stilt/core';
 import StiltHttp from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
-import { mergeTypes, mergeResolvers } from 'merge-graphql-schemas';
-import { makeExecutableSchema } from 'graphql-tools';
 import { maskErrors } from 'graphql-errors';
-import mount from 'koa-mount';
+import { makeExecutableSchema } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
+import mount from 'koa-mount';
+import { mergeTypes, mergeResolvers } from 'merge-graphql-schemas';
 import { classToResolvers } from './ResolveDecorator';
 
 export {
@@ -57,14 +57,14 @@ export default class StiltGraphQl {
 
   static MODULE_IDENTIFIER = Symbol('@stilt/graphql');
 
-  static configure(config: Config | Runnable<Config> = {}, identifierConfig?: IdentifierConfig) {
-    const getConfig: Runnable<Config> = isRunnable(config) ? config : runnable(() => config);
+  static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
+    const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
     const identifiers: Array<InjectableIdentifier> = [
       identifierConfig?.identifier ?? 'stilt-graphql',
     ];
 
-    if (identifierConfig.defaultModule ?? true) {
+    if (identifierConfig?.defaultModule ?? true) {
       identifiers.push(StiltGraphQl);
     }
 
