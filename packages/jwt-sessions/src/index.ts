@@ -1,10 +1,9 @@
-// @flow
-
 import util from 'util';
-import cloneDeep from 'lodash/cloneDeep';
+import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable, Factory } from '@stilt/core';
 import StiltHttp from '@stilt/http';
-import koaJwt from 'koa-jwt';
 import jwt from 'jsonwebtoken';
+import koaJwt, { Options as KoaJwtOptions } from 'koa-jwt';
+import cloneDeep from 'lodash/cloneDeep';
 import { SessionProvider, ISessionProvider } from './SessionProvider';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
@@ -15,38 +14,80 @@ export { withSession, WithSession } from './decorators';
 export { ISessionProvider };
 export type { SessionProvider };
 
+const theSecret = Symbol('secret');
+
 type Config = {
-  secret: string,
   useCookies?: boolean | string,
+} & Omit<KoaJwtOptions, 'cookie'>;
+
+type IdentifierConfig = {
+  /**
+   * If specified, defines the key to use to inject this module dependency.
+   * Defaults to 'stilt-graphql'
+   */
+  identifier?: string,
+
+  /**
+   * If true, the StiltGraphQl class will be usable as identifier to inject this module as a dependency,
+   */
+  defaultModule?: boolean,
 };
 
 export default class StiltJwtSessions {
 
-  static MODULE_IDENTIFIER = Symbol('@stilt/jwt-sessions');
-  _ctxKey = Symbol('@stilt/jwt-session');
+  static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig)
+    : Factory<StiltJwtSessions> {
 
-  _config: Config;
+    const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
-  constructor(config: Config) {
-    this._config = Object.assign({}, config);
+    const identifiers: Array<InjectableIdentifier> = [
+      identifierConfig?.identifier ?? 'stilt-jwt',
+    ];
 
-    if (this._config.useCookies) {
-      this._cookieName = typeof this._config.useCookies === 'string'
-        ? this._config.useCookies
-        : 'jwtSession';
+    if (identifierConfig?.defaultModule ?? true) {
+      identifiers.push(StiltJwtSessions);
     }
+
+    return factory({
+      ids: identifiers,
+      // Extra modules being registered by this factory. They must be declared before the end of the constructor.
+      // The value can be a promise if the initialisation is async
+      build: runnable(async (app: App, stiltHttp: StiltHttp, resolvedConfig: Config) => {
+        return new StiltJwtSessions(app, stiltHttp, resolvedConfig, theSecret);
+      }, [App, StiltHttp, getConfig]),
+    });
   }
 
-  init(app) {
-    const httpModule = app.getPlugin(StiltHttp.MODULE_IDENTIFIER);
-    this._httpModule = httpModule;
-    const koa = httpModule.koa;
+  private readonly stiltHttp: StiltHttp;
+  private readonly contextKey: string;
+
+  private constructor(_app: App, stiltHttp: StiltHttp, config: Config, secret: Symbol) {
+    if (secret !== theSecret) {
+      throw new Error('You\'re trying to instantiate StiltJwtSessions incorrectly.\n'
+        + '=> If you\'re trying to instantiate it by doing new StiltJwtSessions(), call StiltJwtSessions.configure(config) & pass the returned module to App.use instead.\n'
+        + '=> If you\'re injecting this module through @Inject or similar, make sure this module was registered through App.use(StiltJwtSessions.configure(config))');
+    }
+
+    this.stiltHttp = stiltHttp;
+
+    const { useCookies, key = 'session-jwt', ...passDown } = config;
+
+    this.contextKey = key;
+
+    const cookieName = useCookies ? (
+      typeof useCookies === 'string'
+        ? useCookies
+        : 'jwtSession'
+    ) : null;
+
+    const koa = stiltHttp.koa;
 
     koa.use(koaJwt({
-      key: this._ctxKey,
-      secret: this._config.secret,
+      secret: config.secret,
       passthrough: true,
-      cookie: this._cookieName || null,
+      cookie: cookieName || null,
+      key,
+      ...passDown,
     }));
 
     koa.use((ctx, next) => {
@@ -56,24 +97,19 @@ export default class StiltJwtSessions {
       const sessionCopy = cloneDeep(session);
 
       return next().then(() => {
-
         const newSession = this.getSessionFromContext(ctx);
 
         // check if mutable session has changed.
         if (!util.isDeepStrictEqual(newSession, sessionCopy)) {
-          const encodedSession = jwt.sign(newSession, this._config.secret);
+          const encodedSession = jwt.sign(newSession, config.secret);
 
-          if (this._config.useCookies) {
-            ctx.response.set('Set-Cookie', `${this._cookieName}=${encodedSession}`);
+          if (useCookies) {
+            ctx.response.set('Set-Cookie', `${cookieName}=${encodedSession}`);
           } else {
             ctx.response.set('X-Set-Authorization', `Bearer ${encodedSession}`);
           }
         }
       });
-    });
-
-    app.registerInjectables({
-      [ISessionProvider]: new SessionProvider(this),
     });
   }
 
@@ -88,18 +124,18 @@ export default class StiltJwtSessions {
       ctx.state = {};
     }
 
-    if (!ctx.state[this._ctxKey]) {
-      ctx.state[this._ctxKey] = {};
+    if (!ctx.state[this.contextKey]) {
+      ctx.state[this.contextKey] = {};
     }
 
-    return ctx.state[this._ctxKey];
+    return ctx.state[this.contextKey];
   }
 
   /**
    * @returns the session of the current context. Null if no context exists.
    */
   getCurrentSession() {
-    const context = this._httpModule.getCurrentContext();
+    const context = this.stiltHttp.getCurrentContext();
 
     if (context == null) {
       return null;
