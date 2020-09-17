@@ -12,12 +12,10 @@
   "author": "Guylian Cox <guyliancox@gmail.com>",
   "license": "MIT",
   "types": "types",
-  "devDependencies": {
-    "@stilt/core": "^0.19.1"
-  },
   "dependencies": {
     "@stilt/http": "^0.21.0-alpha.0",
     "@stilt/util": "^0.21.0-alpha.0",
+    "@stilt/core": "^0.21.0-alpha.0",
     "graphql": "^14.5.8",
     "graphql-errors": "^2.1.0",
     "graphql-tools": "^4.0.5",
