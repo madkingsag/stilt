@@ -1,6 +1,6 @@
 {
   "name": "@stilt/util",
-  "version": "0.20.0",
+  "version": "0.21.0-alpha.0",
   "description": "Utilitaries used in Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
