@@ -7,7 +7,7 @@ export type RunnableArgs<Return> = {
   dependencies: InjectableIdentifier[],
 };
 
-export type Runnable<Return> = RunnableArgs<Return> & {
+export type TRunnable<Return> = RunnableArgs<Return> & {
   [IsRunnable]: true,
 };
 
@@ -15,15 +15,15 @@ export function runnable<Return>(
   run: (...deps: any[]) => Return,
   // dependencies which will be instantiated and passed to run.
   // and runnables to execute before this one
-  dependencies?: Array<Runnable<any> | InjectableIdentifier>,
+  dependencies?: Array<TRunnable<any> | InjectableIdentifier>,
 );
 
 export function runnable<Return>(args: RunnableArgs<Return>);
 
 export function runnable<Return>(
   run: ((...deps: any[]) => Return) | RunnableArgs<Return>,
-  dependencies?: Array<Runnable<any> | InjectableIdentifier>,
-): Runnable<Return> {
+  dependencies?: Array<TRunnable<any> | InjectableIdentifier>,
+): TRunnable<Return> {
   if (run == null) {
     throw new Error('runnable(): first argument is required');
   }
@@ -42,7 +42,7 @@ export function runnable<Return>(
   };
 }
 
-export function isRunnable(obj: any): obj is Runnable<any> {
+export function isRunnable(obj: any): obj is TRunnable<any> {
   if (obj == null) {
     return false;
   }

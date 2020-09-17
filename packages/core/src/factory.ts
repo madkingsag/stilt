@@ -1,5 +1,5 @@
+import { TRunnable } from './runnables';
 import { InjectableIdentifier } from './typing';
-import { Runnable } from './runnables';
 
 const IsFactory = Symbol('is-factory');
 
@@ -9,7 +9,7 @@ export type FactoryArgs<T> = {
   // Extra modules being registered by this factory. They must be declared before the end of the constructor.
   // The value can be a promise if the initialisation is async
   registering?: InjectableIdentifier[],
-  build: Runnable<T>,
+  build: TRunnable<T>,
 };
 
 export type Factory<T> = FactoryArgs<T> & {
@@ -25,5 +25,5 @@ export function factory<T>(args: FactoryArgs<T>): Factory<T> {
 }
 
 export function isFactory(obj: any): obj is Factory<any> {
-  return obj != null && obj[IsFactory];
+  return obj != null && Boolean(obj[IsFactory]);
 }

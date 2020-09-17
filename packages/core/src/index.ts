@@ -1,11 +1,11 @@
 import {
   asyncGlob,
 } from '@stilt/util';
-import DependencyInjector from './dependency-injector';
-import { Class, InjectableIdentifier } from './typing';
-import { Runnable } from './runnables';
 import { AsyncEventEmitter } from './async-event-emitter';
+import DependencyInjector from './dependency-injector';
 import { Factory } from './factory';
+import { TRunnable } from './runnables';
+import { Class, InjectableIdentifier } from './typing';
 
 export {
   AsyncModuleInit,
@@ -13,7 +13,7 @@ export {
   Inject as inject,
   AsyncModuleInit as asyncModuleInit,
 } from './dependency-injector';
-export { runnable, Runnable, isRunnable } from './runnables';
+export { runnable, TRunnable, isRunnable } from './runnables';
 export { factory, Factory, isFactory } from './factory';
 export { InjectableIdentifier } from './typing';
 
@@ -92,11 +92,11 @@ export class App {
   //   }
   // }
 
-  async executeRunnable<Return>(runnable: Runnable<Return>): Promise<Return> {
+  async executeRunnable<Return>(runnable: TRunnable<Return>): Promise<Return> {
     return this._dependencyInjector.executeRunnable(runnable);
   }
 
-  use(aClass: Class<any>) {
+  use(aClass: InjectableIdentifier | Factory<any>) {
     return this.instantiate(aClass);
   }
 

@@ -1,8 +1,8 @@
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 
-// @ts-ignore
 export class AsyncEventEmitter extends EventEmitter {
-  async emit(type, ...args) {
+  // @ts-expect-error
+  async emit(type, ...args): Promise<boolean> {
     // @ts-ignore
     const handlers = this._events[type];
     const isArray = Array.isArray(handlers);

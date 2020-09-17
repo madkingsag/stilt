@@ -4,9 +4,9 @@ import {
   isPlainObject,
   mapObject,
 } from '@stilt/util';
-import { Class, InjectableIdentifier } from './typing';
 import { Factory, isFactory } from './factory';
-import { Runnable } from './runnables';
+import { TRunnable, isRunnable } from './runnables';
+import { Class, InjectableIdentifier } from './typing';
 
 const initMetaMap = new WeakMap();
 
@@ -43,50 +43,66 @@ export default class DependencyInjector {
     this._idToInstanceMap.set(identifier, instance);
   }
 
-  getInstances<T>(classList: InjectableIdentifier): Promise<T>;
-  getInstances<T>(classList: Array<InjectableIdentifier>): Promise<T[]>;
-  getInstances<T>(classList: { [key: string]: InjectableIdentifier }): Promise<{ [key: string]: T }>;
-  getInstances<T>(aClass: InjectableIdentifier | Array<InjectableIdentifier> | { [key: string]: InjectableIdentifier }): Promise<T | T[] | { [key: string]: T }> {
-    if (aClass == null) {
-      // @ts-ignore - Class must be either null or undefined, symbol won't be an issue
-      throw new Error(`Trying to get instance of invalid identifier ${classIdentifier}`);
+  getInstances<T>(moduleFactory: Factory<T>): Promise<T>;
+  getInstances<T>(runnable: TRunnable<T>): Promise<T>;
+  getInstances<T>(moduleIdentifier: InjectableIdentifier): Promise<T>;
+  getInstances<T>(moduleArray: Array<InjectableIdentifier | Factory<T>>): Promise<T[]>;
+  getInstances<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> }): Promise<{ [key: string]: T }>;
+
+  getInstances<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier | Array<InjectableIdentifier | Factory<T> | TRunnable<T>> | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
+
+    if (moduleFactory == null) {
+      throw new Error(`getInstances: received parameter is null`);
     }
 
-    if (Array.isArray(aClass)) {
+    // these are run first as they are POJOs with special logic
+    if (isFactory(moduleFactory) || isRunnable(moduleFactory)) {
+      return this.getInstance<T>(moduleFactory);
+    }
+
+    if (Array.isArray(moduleFactory)) {
       return Promise.all(
-        aClass.map(ClassItem =>
-          this.getInstance(ClassItem),
-        ),
+        moduleFactory.map(ClassItem => this.getInstance(ClassItem)),
       );
     }
 
-    if (typeof aClass === 'object' && isPlainObject(aClass)) {
+    if (typeof moduleFactory === 'object' && isPlainObject(moduleFactory)) {
       return awaitAllEntries(
-        mapObject(aClass, ClassItem =>
-          this.getInstance(ClassItem),
-        ),
+        mapObject(moduleFactory, (ClassItem: Factory<T> | TRunnable<T> | InjectableIdentifier) => {
+          return this.getInstance<T>(ClassItem);
+        }),
       );
     }
 
-    assert(typeof aClass === 'function');
+    assert(typeof moduleFactory === 'function');
 
-    // @ts-ignore
-    return this._dependencyInjector.getInstance(aClass);
+    return this.getInstance<T>(moduleFactory);
   }
 
-  async getInstance(classIdentifier: InjectableIdentifier) {
-    if (classIdentifier == null) {
+  async getInstance<T>(buildableModule: InjectableIdentifier | Factory<T> | TRunnable<T>): Promise<T> {
+    if (buildableModule == null) {
       // @ts-ignore - Class must be either null or undefined, symbol won't be an issue
-      throw new Error(`Trying to get instance of invalid identifier ${classIdentifier}`);
+      throw new Error(`Trying to get instance of invalid module: ${buildableModule}`);
     }
 
-    if (this._idToInstanceMap.has(classIdentifier)) {
-      return this._idToInstanceMap.get(classIdentifier);
+    // runnables don't have IDs, we just run them with their requested dependencies every time we see them
+    if (isRunnable(buildableModule)) {
+      return this.executeRunnable(buildableModule);
     }
 
-    const factory = this._idToFactoryMap.get(classIdentifier) ?? classIdentifier;
+    // this module has already been built, return old version
+    if (this._idToInstanceMap.has(buildableModule)) {
+      return this._idToInstanceMap.get(buildableModule);
+    }
+
+    // build the instance & register its ID
+
+    const factory = isFactory(buildableModule)
+      ? buildableModule
+      : (this._idToFactoryMap.get(buildableModule) ?? buildableModule);
+
     if (typeof factory !== 'function' && !isFactory(factory)) {
-      throw new Error(`Cannot instantiate dependency ${JSON.stringify(String(classIdentifier))}: It has not been registered`);
+      throw new Error(`Cannot instantiate dependency ${JSON.stringify(String(buildableModule))}: It has not been registered`);
     }
 
     // TODO: if classIdentifier is a class or a factory, that it is not a key in _idToFactoryMap, but that a string/symbol key is and points to this factory,
@@ -98,6 +114,10 @@ export default class DependencyInjector {
 
     if (isFactory(factory)) {
       for (const id of factory.ids) {
+        if (this._idToInstanceMap.has(id)) {
+          throw new Error(`Factory tries to register ID ${String(id)}, but it has already been registered`);
+        }
+
         this._idToInstanceMap.set(id, instancePromise);
       }
     }
@@ -111,9 +131,14 @@ export default class DependencyInjector {
     return this.executeRunnable(factory.build);
   }
 
-  async executeRunnable<Return>(runnable: Runnable<Return>): Promise<Return> {
-    const instances = await this.getInstances(runnable.dependencies);
+  async executeRunnable<Return>(runnable: TRunnable<Return>): Promise<Return> {
     const run = runnable.run;
+
+    if (!runnable.dependencies) {
+      return run();
+    }
+
+    const instances = await this.getInstances(runnable.dependencies);
 
     if (Array.isArray(runnable.dependencies)) {
       return run(...instances);
