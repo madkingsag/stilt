@@ -1,10 +1,10 @@
 import { AsyncLocalStorage } from 'async_hooks';
-import { App, isRunnable, factory, runnable, Runnable, InjectableIdentifier } from '@stilt/core';
+import { App, isRunnable, factory, runnable, TRunnable, InjectableIdentifier, Factory } from '@stilt/core';
+import chalk from 'chalk';
+import ip from 'ip';
 import Koa from 'koa';
 import Router from 'koa-better-router';
 import bodyParser from 'koa-bodyparser';
-import ip from 'ip';
-import chalk from 'chalk';
 import ContextProvider, { IContextProvider } from './ContextProvider';
 
 export { makeControllerInjector } from './controllerInjectors';
@@ -28,14 +28,14 @@ const theSecret = Symbol('secret');
 
 export default class StiltHttp {
 
-  static configure(config: Config | Runnable<Config>, identifierConfig?: IdentifierConfig) {
+  static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltHttp> {
     const getConfig = isRunnable(config) ? config : runnable(() => config);
 
     const identifiers: Array<InjectableIdentifier> = [
       identifierConfig?.identifier ?? 'stilt-http',
     ];
 
-    if (identifierConfig.defaultModule ?? true) {
+    if (identifierConfig?.defaultModule ?? true) {
       identifiers.push(StiltHttp);
     }
 
@@ -49,7 +49,7 @@ export default class StiltHttp {
 
   private _declaredEndpoints = [];
   private port;
-  private koa;
+  public koa;
   private router;
   private logger;
   private httpServer;
@@ -103,7 +103,9 @@ export default class StiltHttp {
   close() {
     return new Promise((resolve, reject) => {
       if (!this.httpServer) {
-        return void resolve(false);
+        resolve(false);
+
+        return;
       }
 
       this.httpServer.close(err => {
