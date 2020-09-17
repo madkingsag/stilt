@@ -4,15 +4,12 @@ import StiltHttp from '@stilt/http';
 import jwt from 'jsonwebtoken';
 import koaJwt, { Options as KoaJwtOptions } from 'koa-jwt';
 import cloneDeep from 'lodash/cloneDeep';
-import { SessionProvider, ISessionProvider } from './SessionProvider';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)
 // TODO cookie creation options
 
 export { withSession, WithSession } from './decorators';
-export { ISessionProvider };
-export type { SessionProvider };
 
 const theSecret = Symbol('secret');
 
@@ -35,7 +32,7 @@ type IdentifierConfig = {
 
 export default class StiltJwtSessions {
 
-  static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig)
+  static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig)
     : Factory<StiltJwtSessions> {
 
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
@@ -61,7 +58,7 @@ export default class StiltJwtSessions {
   private readonly stiltHttp: StiltHttp;
   private readonly contextKey: string;
 
-  private constructor(_app: App, stiltHttp: StiltHttp, config: Config, secret: Symbol) {
+  constructor(_app: App, stiltHttp: StiltHttp, config: Config, secret: Symbol) {
     if (secret !== theSecret) {
       throw new Error('You\'re trying to instantiate StiltJwtSessions incorrectly.\n'
         + '=> If you\'re trying to instantiate it by doing new StiltJwtSessions(), call StiltJwtSessions.configure(config) & pass the returned module to App.use instead.\n'
