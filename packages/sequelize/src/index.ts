@@ -1,10 +1,7 @@
-
-// @flow
-
 import { URL } from 'url';
-import Sequelize from 'sequelize';
+import { isRunnable, runnable, factory, App, TRunnable, Logger, InjectableIdentifier, Factory } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
-import { isRunnable, runnable, factory, App } from '@stilt/core';
+import { Dialect, Sequelize, SyncOptions } from 'sequelize';
 import { getAssociationMeta, getModelInitData } from './decorators';
 
 export {
@@ -33,10 +30,12 @@ export {
 export { withTransaction, getCurrentTransaction } from './transactions';
 
 type Config = {
+  namespace?: string,
   databaseUri: string,
   models: string,
   debug?: boolean,
   sequelizeOptions: Object, // TODO typing
+  sync?: boolean | SyncOptions,
 };
 
 type IdentifierConfig = {
@@ -78,21 +77,19 @@ const theSecret = Symbol('secret');
  */
 export class StiltSequelize {
 
-  static configure(getConfig: Config | Runnable<Config>, identifierConfig?: IdentifierConfig) {
-    if (!isRunnable(getConfig)) {
-      getConfig = runnable(() => getConfig);
-    }
+  static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltSequelize> {
+    const getConfig = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers = [
+    const identifiers: Array<InjectableIdentifier> = [
       identifierConfig?.identifiers?.['stilt-sequelize'] ?? 'stilt-sequelize',
     ];
 
     // this module also declares a secondary 'sequelize' module. This module should be init if that secondary module is required
-    const registering = [
-      identifierConfig?.identifiers?.['sequelize'] ?? 'sequelize',
+    const registering: Array<InjectableIdentifier> = [
+      identifierConfig?.identifiers?.sequelize ?? 'sequelize',
     ];
 
-    if (identifierConfig.defaultModule ?? true) {
+    if (identifierConfig?.defaultModule ?? true) {
       identifiers.push(StiltSequelize);
       registering.push(Sequelize);
     }
@@ -102,13 +99,18 @@ export class StiltSequelize {
       // Extra modules being registered by this factory. They must be declared before the end of the constructor.
       // The value can be a promise if the initialisation is async
       registering,
-      build: runnable((app, config) => {
-        return new StiltSequelize(app, config, identifierConfig, theSecret);
+      build: runnable((app, resolvedConfig) => {
+        return new StiltSequelize(app, resolvedConfig, identifierConfig, theSecret);
       }, [App, getConfig]),
     });
   }
 
-  config: Config;
+  public readonly sequelize: Sequelize;
+  private readonly config: Config;
+  private readonly logger: Logger;
+  private readonly modelLoadingPromise: Promise<any>;
+
+  private running: boolean = false;
 
   constructor(app: App, config: Config, identifierConfig: IdentifierConfig, secret: Symbol) {
     if (secret !== theSecret) {
@@ -122,27 +124,14 @@ export class StiltSequelize {
       namespace: (config.namespace || 'stilt-sequelize'),
     };
 
-    const sequelizeDeferred = Deferred();
-
-    const sequelizeModuleId = identifierConfig?.identifiers?.sequelize ?? 'sequelize';
-    app.registerInstances({
-      [sequelizeModuleId]: sequelizeDeferred.promise,
-    });
-
-    if (identifierConfig.defaultModule ?? true) {
-      app.registerInstance(Sequelize, sequelizeDeferred.promise);
-    }
-
-    this.sequelizeDeferred = sequelizeDeferred;
-
     app.lifecycle.on('start', () => this.start());
     app.lifecycle.on('close', () => this.close());
-  }
-
-  async init(app) {
 
     this.logger = app.makeLogger('sequelize');
     const uri = new URL(this.config.databaseUri);
+
+    const dialect = uri.protocol.slice(0, -1);
+    assertDialect(dialect);
 
     this.sequelize = new Sequelize(
       uri.pathname.substr(1),
@@ -151,20 +140,21 @@ export class StiltSequelize {
       {
         ...(this.config.sequelizeOptions || {}),
         host: uri.hostname,
-        port: uri.port,
-        dialect: uri.protocol.slice(0, -1),
+        port: Number(uri.port),
+        dialect,
         logging: this.config.debug ? this.logger.info.bind(this.logger) : null,
       },
     );
 
+    const sequelizeModuleId = identifierConfig?.identifiers?.sequelize ?? 'sequelize';
+    app.registerInstance(sequelizeModuleId, this.sequelize);
+
+    if (identifierConfig?.defaultModule ?? true) {
+      app.registerInstance(Sequelize, this.sequelize);
+    }
+
     const modelDirectory = this.config.models || '**/*.entity.js';
-
-    await loadModels(modelDirectory, this.sequelize);
-    await this.start();
-
-    this.logger.info('Database Connection Ready');
-
-    this.sequelizeDeferred.resolve(this.sequelize);
+    this.modelLoadingPromise = loadModels(modelDirectory, this.sequelize);
   }
 
   async start() {
@@ -174,13 +164,26 @@ export class StiltSequelize {
 
     this.running = true;
 
+    await this.modelLoadingPromise;
     await this.sequelize.authenticate();
-    await this.sequelize.sync();
+
+    const sync = this.config.sync ?? true;
+
+    if (sync !== false) {
+      const syncOptions = typeof sync === 'boolean' ? undefined : sync;
+      await this.sequelize.sync(syncOptions);
+    }
+
+    this.logger.debug('Database Connection Ready');
   }
 
   async close() {
     await this.sequelize.close();
     this.running = false;
+  }
+
+  isRunning() {
+    return this.running;
   }
 }
 
@@ -221,12 +224,13 @@ async function loadModels(modelsGlob, sequelize) {
   }
 }
 
-function Deferred() {
+const validDialects = ['mysql', 'postgres', 'sqlite', 'mariadb', 'mssql', 'mariadb'];
+export function isDialect(dialect: string): dialect is Dialect {
+  return validDialects.includes(dialect);
+}
 
-  let resolve;
-  const promise = new Promise(_resolve => {
-    resolve = _resolve;
-  });
-
-  return { promise, resolve };
+export function assertDialect(dialect: string): asserts dialect is Dialect {
+  if (!isDialect(dialect)) {
+    throw new Error(`${dialect} is not a valid dialect. Use one of the following values instead: ${validDialects.join(', ')}`);
+  }
 }
