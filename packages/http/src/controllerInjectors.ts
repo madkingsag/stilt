@@ -74,7 +74,11 @@ export function wrapControllerWithInjectors(
 
       return {
         ...injectorMeta,
-        dependenciesInstances: instantiateDependencyTable(stiltApp, injectorMeta.dependencies),
+        dependenciesInstances: instantiateDependencyTable(stiltApp, injectorMeta.dependencies).catch(e => {
+          const className = Class.name || Class.constructor.name;
+          // TODO: add the name of the injector
+          throw new Error(`Failed to build controller ${className}#${methodName} as the dependency of one of its injectors failed to build: \n ${e.message}`);
+        }),
       };
     });
 
