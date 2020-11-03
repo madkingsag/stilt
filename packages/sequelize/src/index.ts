@@ -27,6 +27,13 @@ export {
   hasOne,
 } from './decorators';
 
+export type {
+  HasOneAssociationOptions,
+  BelongsToAssociationOptions,
+  HasManyAssociationOptions,
+  BelongsToManyAssociationOptions,
+} from './decorators';
+
 export { withTransaction, getCurrentTransaction } from './transactions';
 
 type Config = {

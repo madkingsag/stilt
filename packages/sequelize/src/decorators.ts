@@ -1,27 +1,39 @@
-// @flow
-
-import { type Model } from 'sequelize';
-import isCallable from 'is-callable'; // thx jordan you're awesome
+import isCallable from 'is-callable';
+import type {
+  ModelAttributes,
+  ModelCtor,
+  ModelOptions,
+  BelongsToOptions as SequelizeBelongsToOptions,
+  HasOneOptions as SequelizeHasOneOptions,
+  HasManyOptions as SequelizeHasManyOptions,
+  BelongsToManyOptions as SequelizeBelongsToManyOptions,
+  ThroughOptions,
+} from 'sequelize';
 
 const METADATA = Symbol('stilt-sequelize-metadata');
 
+type SequelizeAs = string | { singular: string; plural: string };
+
 type AssociationType = string;
-type AssociationOptions = Object;
+
+type AssociationOptions = BelongsToAssociationOptions| HasOneAssociationOptions
+  | HasManyAssociationOptions | BelongsToManyAssociationOptions;
+
 type GetSymmetricalAssociationFunc = (AssociationOptions) => null | ({
   type: AssociationType,
   options: AssociationOptions,
 });
 
 type AssociationTag = {
-  sourceModel: typeof Model,
-  targetModel: typeof Model | () => typeof Model,
+  sourceModel: ModelCtor<any>,
+  targetModel: ModelCtor<any> | (() => ModelCtor<any>),
   associationType: AssociationType,
   getSymmetricalAssociation: GetSymmetricalAssociationFunc,
   associationOptions: AssociationOptions,
 };
 
 type SequelizeAssociationMeta = {
-  model: typeof Model,
+  model: ModelCtor<any>,
   type: string,
   parameters: any[],
 };
@@ -37,7 +49,7 @@ function flat<T>(arr: T[][]): T[] {
   return result;
 }
 
-function getAssociationMeta(models: Array<typeof Model>): SequelizeAssociationMeta[] {
+function getAssociationMeta(models: Array<ModelCtor<any>>): SequelizeAssociationMeta[] {
   const associations: SequelizeAssociationMeta[] = [];
   const associationTags: AssociationTag[] = flat(models
     .map(model => model[METADATA])
@@ -45,19 +57,21 @@ function getAssociationMeta(models: Array<typeof Model>): SequelizeAssociationMe
 
   for (const associationTag of associationTags) {
     const { sourceModel, associationType, getSymmetricalAssociation } = associationTag;
-    const associationOptions = { ...associationTag.associationOptions };
+    const associationOptions: AssociationOptions = { ...associationTag.associationOptions };
 
     /*
     * lazy-load models (so decorators can reference the decorated model using a function), eg:
     * @BelongsTo(() => User)
     * class User extends Model{}
     */
-    const targetModel = isPureFunction(associationTag.targetModel)
+    const targetModel: ModelCtor<any> = isPureFunction(associationTag.targetModel)
       ? associationTag.targetModel()
       : associationTag.targetModel;
 
     // lazy-load association.through
+    // @ts-expect-error
     if (associationOptions.through && isPureFunction(associationOptions.through)) {
+      // @ts-expect-error
       associationOptions.through = associationOptions.through();
     }
 
@@ -90,16 +104,24 @@ function tagAssociation(model, associationMeta: AssociationTag) {
   model[METADATA].push(associationMeta);
 }
 
-function isPureFunction(func: Function): boolean {
+interface PureFunction {
+  (): any
+}
+
+function isPureFunction(func: Function): func is PureFunction {
   return isCallable(func) && Object.getPrototypeOf(func) === Function.prototype;
 }
 
 // Make associations two-way.
-function makeAssociationDecorator(associationType, { getSymmetricalAssociation }) {
-  return function createAssociation(targetModel, associationOptions: AssociationOptions) {
+function makeAssociationDecorator<AnyAssociationOpts extends AssociationOptions>(
+  associationType,
+  { getSymmetricalAssociation },
+) {
+  return function createAssociation(targetModel, associationOptions: AnyAssociationOpts) {
     return function decorate(sourceModel) {
 
       if (!associationOptions) {
+        // @ts-expect-error
         associationOptions = {};
       }
 
@@ -117,6 +139,16 @@ function makeAssociationDecorator(associationType, { getSymmetricalAssociation }
     };
   };
 }
+
+type BelongsToAssociationOptions = SequelizeBelongsToOptions & {
+  // Added by Stilt
+  inverse?: {
+    type: 'many' | 'one',
+    as: SequelizeAs,
+    scope?: boolean, // ONLY IF "many"
+    sourceKey?: string // ONLY IF "many"
+  },
+};
 
 /*
  * @BelongsTo(B, optSource = {
@@ -170,7 +202,7 @@ function makeAssociationDecorator(associationType, { getSymmetricalAssociation }
  *   scope: optSource.inverse.scope,
  * })
  */
-const BelongsTo = makeAssociationDecorator('belongsTo', {
+const BelongsTo = makeAssociationDecorator<BelongsToAssociationOptions>('belongsTo', {
 
   getSymmetricalAssociation(sourceParams) {
 
@@ -213,6 +245,13 @@ const BelongsTo = makeAssociationDecorator('belongsTo', {
   },
 });
 
+type HasOneAssociationOptions = SequelizeHasOneOptions & {
+  // Added by Stilt
+  inverse?: {
+    as: SequelizeAs,
+  },
+}
+
 /*
  * @HasOne(B, optSource = {
  *   hooks: boolean,
@@ -246,7 +285,7 @@ const BelongsTo = makeAssociationDecorator('belongsTo', {
  *   as: optSource.inverse.as,
  * })
  */
-const HasOne = makeAssociationDecorator('hasOne', {
+const HasOne = makeAssociationDecorator<HasOneAssociationOptions>('hasOne', {
 
   getSymmetricalAssociation: getSymmetricalHasAssociation,
 });
@@ -286,6 +325,13 @@ function getSymmetricalHasAssociation(sourceParams) {
     options: inverseOptions,
   };
 }
+
+type HasManyAssociationOptions = SequelizeHasManyOptions & {
+  // Added by Stilt
+  inverse?: {
+    as: SequelizeAs,
+  },
+};
 
 /*
  * A.HasMany(B, optSource = {
@@ -328,11 +374,19 @@ function getSymmetricalHasAssociation(sourceParams) {
  *   as: optSource.inverse.as,
  * })
  */
-const HasMany = makeAssociationDecorator('hasMany', {
-
+const HasMany = makeAssociationDecorator<HasManyAssociationOptions>('hasMany', {
   getSymmetricalAssociation: getSymmetricalHasAssociation,
 });
 
+type BelongsToManyAssociationOptions = Omit<SequelizeBelongsToManyOptions, 'through'> & {
+  // add support for lazy-loading of models
+  through: string | ModelCtor<any> | ThroughOptions | (() => ModelCtor<any> | ThroughOptions),
+
+  // Added by stilt
+  inverse?: {
+    as: SequelizeAs,
+  },
+};
 /*
  * A.BelongsToMany(B, optSource = {
  *   // common
@@ -367,9 +421,9 @@ const HasMany = makeAssociationDecorator('hasMany', {
  *   as: optSource.inverse.as,
  * })
  */
-const BelongsToMany = makeAssociationDecorator('belongsToMany', {
+const BelongsToMany = makeAssociationDecorator<BelongsToManyAssociationOptions>('belongsToMany', {
 
-  getSymmetricalAssociation(sourceParams) {
+  getSymmetricalAssociation(sourceParams: BelongsToManyAssociationOptions) {
 
     const inverse = sourceParams.inverse;
 
@@ -389,6 +443,7 @@ const BelongsToMany = makeAssociationDecorator('belongsToMany', {
     const inverseParams = Object.assign({}, sourceParams);
 
     // invert keys
+    // TODO: what about "sourceKey"?
     inverseParams.foreignKey = sourceParams.otherKey;
     inverseParams.otherKey = sourceParams.foreignKey;
 
@@ -413,8 +468,8 @@ const BelongsToMany = makeAssociationDecorator('belongsToMany', {
 const SequelizeOptions = Symbol('sequelize-options');
 const SequelizeAttributes = Symbol('sequelize-attributes');
 
-function Options(options) {
-  return function decorate(model: Model) {
+function Options(options: ModelOptions) {
+  return function decorate(model: ModelCtor<any>) {
     Object.defineProperty(model, SequelizeOptions, {
       value: options,
       enumerable: false,
@@ -424,8 +479,8 @@ function Options(options) {
   };
 }
 
-function Attributes(attributes) {
-  return function decorate(model: Model) {
+function Attributes(attributes: ModelAttributes) {
+  return function decorate(model: ModelCtor<any>) {
     Object.defineProperty(model, SequelizeAttributes, {
       value: attributes,
       enumerable: false,
@@ -435,7 +490,7 @@ function Attributes(attributes) {
   };
 }
 
-export function getModelInitData(model: Model): { options: Object, attributes: Object } {
+export function getModelInitData(model: ModelCtor<any>): { options: Object, attributes: Object } {
   return {
     options: model[SequelizeOptions] || {},
     attributes: model[SequelizeAttributes] || {},
@@ -457,4 +512,11 @@ export {
   Options as options,
   Attributes,
   Attributes as attributes,
+};
+
+export type {
+  HasOneAssociationOptions,
+  BelongsToAssociationOptions,
+  HasManyAssociationOptions,
+  BelongsToManyAssociationOptions,
 };

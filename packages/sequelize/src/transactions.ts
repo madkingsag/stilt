@@ -1,9 +1,7 @@
-// @flow
-
 import { AsyncLocalStorage } from 'async_hooks';
 import type { Sequelize, Transaction } from 'sequelize';
 
-const asyncStore = new AsyncLocalStorage();
+const asyncStore = new AsyncLocalStorage<Transaction>();
 
 /**
  * This works like {@link Sequelize#transaction}, but if this is called inside an active transaction,
