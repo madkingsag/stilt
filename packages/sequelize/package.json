@@ -13,7 +13,7 @@
   "license": "MIT",
   "types": "types",
   "peerDependencies": {
-    "sequelize": "^5.21.11"
+    "sequelize": "^6.3.5"
   },
   "dependencies": {
     "@stilt/core": "^0.21.0-alpha.2",
@@ -21,6 +21,6 @@
     "is-callable": "^1.1.4"
   },
   "devDependencies": {
-    "sequelize": "^5.21.11"
+    "sequelize": "^6.3.5"
   }
 }
