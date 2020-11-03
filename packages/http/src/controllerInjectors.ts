@@ -1,26 +1,33 @@
-import type { App } from '@stilt/core';
+import type { App, InjectableIdentifier } from '@stilt/core';
 import { isPlainObject } from '@stilt/util';
 
 const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
 
-type InjectorFactoryOptions<T> = {
-  dependencies?: { [key: string]: string | Function | symbol } | Array<string | Function | symbol>,
-  run: (parameters: T[], dependencies?: any[]) => { [key: string]: any },
+type TInjectorDeps = any[] | { [key: string]: any };
+
+type InjectorFactoryOptions<Params extends Array<any>, Dependencies extends TInjectorDeps> = {
+  dependencies?: { [k in keyof Dependencies]: InjectableIdentifier },
+  run: (
+    /* runtime parameters */
+    parameters: Params,
+    /* dependencies declared in dependencies property */
+    dependencies?: Dependencies
+  ) => { [key: string]: any },
 };
 
-type InjectorMeta<Arg> = {
+type InjectorMeta<Params extends Array<any>, Dependencies extends TInjectorDeps> = {
   parameterNum: number,
   options: any,
-  valueProvider: InjectorFactoryOptions<Arg>['run'],
-  dependencies: InjectorFactoryOptions<Arg>['dependencies']
+  valueProvider: InjectorFactoryOptions<Params, Dependencies>['run'],
+  dependencies: InjectorFactoryOptions<Params, Dependencies>['dependencies']
 };
 
-function addControllerInjector<T>(
+function addControllerInjector<Params extends Array<any>, Dependencies extends TInjectorDeps>(
   Class: Function,
   methodName: string,
   parameterNum,
-  injector: InjectorFactoryOptions<T>,
-  injectorParams: T[],
+  injector: InjectorFactoryOptions<Params, Dependencies>,
+  injectorParams: Params,
 ) {
   const injectorMeta = Class[CONTROLLER_INJECTORS] || new Map();
   Class[CONTROLLER_INJECTORS] = injectorMeta;
@@ -37,9 +44,14 @@ function addControllerInjector<T>(
   });
 }
 
-export function makeControllerInjector<T>(injector: InjectorFactoryOptions<T>): Function {
+export type TControllerInjector<T extends Array<any>> = (parameterPos: number, ...parameters: T) => MethodDecorator;
 
-  return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: T[]): Function {
+export function makeControllerInjector<
+  Args extends Array<any>,
+  Deps extends TInjectorDeps
+>(injector: InjectorFactoryOptions<Args, Deps>): TControllerInjector<Args> {
+
+  return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: Args): MethodDecorator {
 
     return function decorateController(Class: Function, methodName: string) {
       addControllerInjector(Class, methodName, parameterNum, injector, injectorParameters);
@@ -63,7 +75,7 @@ export function wrapControllerWithInjectors(
     return wrappedMethod;
   }
 
-  const injectorsMetaList: Array<InjectorMeta<any>> = injectorsMetaMap
+  const injectorsMetaList: Array<InjectorMeta<any, any>> = injectorsMetaMap
     .get(methodName)
 
     // get the instance of all declared dependencies.

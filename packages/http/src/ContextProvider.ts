@@ -1,8 +1,14 @@
-import type StiltHttp from '.';
+import type { StiltHttp } from './stilt-http';
 
+/**
+ * @deprecated use {@link StiltHttp}
+ */
 export const IContextProvider = Symbol('context-provider');
 
-export default class ContextProvider {
+/**
+ * @deprecated use {@link StiltHttp}
+ */
+export class ContextProvider {
   private stiltHttp: StiltHttp;
 
   constructor(stiltHttp: StiltHttp) {
