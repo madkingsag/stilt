@@ -5,7 +5,7 @@ const Meta = Symbol('rest-routing-meta');
 export type RoutingMetadata = Route[];
 
 export type Route = {
-  handlerName: string,
+  handlerName: string | symbol,
   httpMethod: string,
   path: string,
 };
@@ -18,8 +18,8 @@ function getSetMeta(func: Object): RoutingMetadata {
   return func[Meta];
 }
 
-function makeHttpMethod(httpMethod): Function {
-  return function decorator(path) {
+function makeHttpMethod(httpMethod): (path: string) => MethodDecorator {
+  return function decorator(path: string): MethodDecorator {
     return function decorate(Class, methodName) {
 
       const routingMetadata = getSetMeta(Class);
@@ -93,3 +93,6 @@ export const PATCH = makeHttpMethod('patch');
  * @type {(path: string) => Function}
  */
 export const DELETE = makeHttpMethod('del');
+
+// TODO: Add @Accept() to filter based on Accept header (application/json by default).
+// TODO: Add @ContentType(), application/json by default. If not application/json, return raw.

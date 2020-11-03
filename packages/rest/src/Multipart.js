@@ -1,7 +1,7 @@
 // @flow
 
-import { makeControllerInjector, IContextProvider } from '@stilt/http';
 import Multer from '@koa/multer';
+import { makeControllerInjector, IContextProvider } from '@stilt/http';
 import RestError from './RestError';
 
 export type UploadedFile = {

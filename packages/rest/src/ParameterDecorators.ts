@@ -1,14 +1,14 @@
-// @flow
-
-import { makeControllerInjector, IContextProvider, type ContextProvider } from '@stilt/http';
+import { makeControllerInjector, IContextProvider, ContextProvider } from '@stilt/http';
+import { TControllerInjector } from '@stilt/http/types/controllerInjectors';
 import { isPlainObject } from '@stilt/util';
+import type { Schema as JoiSchema } from 'joi';
 import RestError from './RestError';
 
 let Joi;
 
 try {
   // TODO: either force dep or move to top-level await + import()
-  Joi = require('@hapi/joi');
+  Joi = require('joi');
 } catch (ignore) { /* ignore */ }
 
 function runValidation(paramValue, paramValidator, parameterSource, context, validationOpts, errorStatus) {
@@ -17,11 +17,11 @@ function runValidation(paramValue, paramValidator, parameterSource, context, val
   }
 
   if (!Joi || !Joi.isSchema) {
-    throw new Error('[REST] You need to install @hapi/joi >= 16 in order to use parameter validation');
+    throw new Error('[REST] You need to install joi >= 16 in order to use parameter validation');
   }
 
   if (!Joi.isSchema(paramValidator)) {
-    throw new Error('[REST] Only @hapi/joi >= 16 schemas are supported in parameter validation.');
+    throw new Error('[REST] Only joi >= 16 schemas are supported in parameter validation.');
   }
 
   const validation = paramValidator.validate(paramValue, validationOpts);
@@ -41,7 +41,15 @@ function runValidation(paramValue, paramValidator, parameterSource, context, val
   return validation.value;
 }
 
-function makeParameterInjector(factoryOptions) {
+type TValidators = JoiSchema | Array<string> | { [key: string]: JoiSchema };
+
+type TRuntimeOpts = {
+  as?: string,
+};
+
+type TParameterInjector = TControllerInjector<[TValidators, TRuntimeOpts]>;
+
+function makeParameterInjector(factoryOptions): TParameterInjector {
 
   const validationOptions = {
     convert: true,
@@ -50,7 +58,10 @@ function makeParameterInjector(factoryOptions) {
 
   return makeControllerInjector({
     dependencies: { contextProvider: IContextProvider },
-    run([validators, runtimeOptions], { contextProvider }: { contextProvider: ContextProvider }) {
+    run(
+      [validators, runtimeOptions]: [TValidators, TRuntimeOpts],
+      { contextProvider }: { contextProvider: ContextProvider },
+    ) {
 
       const context = contextProvider.getCurrentContext();
       const rawParametersBag = factoryOptions.getParametersBag(context);

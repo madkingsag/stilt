@@ -13,13 +13,14 @@
   "license": "MIT",
   "types": "types",
   "optionalDependencies": {
-    "@hapi/joi": "^17.1.0"
+    "joi": "^17.1.0"
   },
   "dependencies": {
     "@koa/multer": "^3.0.0",
     "@stilt/core": "^0.21.0-alpha.2",
     "@stilt/http": "^0.21.0-alpha.2",
     "@stilt/util": "^0.21.0-alpha.0",
+    "@types/joi": "^14.3.4",
     "change-case": "^3.1.0",
     "deep-freeze-strict": "^1.1.1",
     "lodash": "^4.17.15",
