@@ -2,8 +2,9 @@ import {
   asyncGlob,
 } from '@stilt/util';
 import Emittery from 'emittery';
-import DependencyInjector from './dependency-injector';
+import DependencyInjector, { TInstantiable } from './dependency-injector';
 import { Factory } from './factory';
+import { TOptionalLazy } from './lazy';
 import { TRunnable } from './runnables';
 import { Class, InjectableIdentifier } from './typing';
 
@@ -16,6 +17,7 @@ export {
 export { runnable, TRunnable, isRunnable } from './runnables';
 export { factory, Factory, isFactory } from './factory';
 export { InjectableIdentifier } from './typing';
+export { lazy } from './lazy';
 
 export type Logger = Console;
 
@@ -36,6 +38,7 @@ export class App {
   public readonly lifecycle = new Emittery();
 
   private _dependencyInjector = new DependencyInjector();
+
   // private _injectablesGlob;
 
   constructor(config: Config = {}) {
@@ -85,14 +88,12 @@ export class App {
     return this._dependencyInjector.registerInstance(identifier, instance);
   }
 
-  instantiate<T>(moduleFactory: Factory<T>): Promise<T>;
-  instantiate<T>(runnable: TRunnable<T>): Promise<T>;
-  instantiate<T>(moduleIdentifier: InjectableIdentifier): Promise<T>;
-  instantiate<T>(moduleArray: Array<InjectableIdentifier | Factory<T>>): Promise<T[]>;
-  instantiate<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> }): Promise<{ [key: string]: T }>;
-  instantiate<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier
-    | Array<InjectableIdentifier | Factory<T> | TRunnable<T>>
-    | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
+  instantiate<T>(runnable: TOptionalLazy<TInstantiable<T>>): Promise<T>;
+  instantiate<T>(moduleArray: Array<TOptionalLazy<TInstantiable<T>>>): Promise<T[]>;
+  instantiate<T>(moduleMap: { [key: string]: TOptionalLazy<TInstantiable<T>> }): Promise<{ [key: string]: T }>;
+  instantiate<T>(moduleFactory: TOptionalLazy<TInstantiable<T>>
+    | Array<TOptionalLazy<TInstantiable<T>>>
+    | { [key: string]: TOptionalLazy<TInstantiable<T>> }): Promise<T | T[] | { [key: string]: T }> {
     // @ts-ignore
     return this._dependencyInjector.getInstances(moduleFactory);
   }

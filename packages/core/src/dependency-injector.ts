@@ -5,10 +5,13 @@ import {
   mapObject,
 } from '@stilt/util';
 import { Factory, isFactory } from './factory';
+import { isLazy, TOptionalLazy } from './lazy';
 import { TRunnable, isRunnable } from './runnables';
 import { Class, InjectableIdentifier } from './typing';
 
 const initMetaMap = new WeakMap();
+
+export type TInstantiable<T> = TRunnable<T> | Factory<T> | InjectableIdentifier;
 
 export default class DependencyInjector {
 
@@ -43,15 +46,36 @@ export default class DependencyInjector {
     this._idToInstanceMap.set(identifier, instance);
   }
 
-  getInstances<T>(moduleFactory: Factory<T>): Promise<T>;
-  getInstances<T>(runnable: TRunnable<T>): Promise<T>;
-  getInstances<T>(moduleIdentifier: InjectableIdentifier): Promise<T>;
-  getInstances<T>(moduleArray: Array<InjectableIdentifier | Factory<T> | TRunnable<T>>): Promise<T[]>;
-  getInstances<T>(moduleMap: { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<{ [key: string]: T }>;
+  getInstances<T>(moduleFactory: TOptionalLazy<TInstantiable<T>>): Promise<T>;
+  getInstances<T>(moduleArray: Array<TOptionalLazy<TInstantiable<T>>>): Promise<T[]>;
+  getInstances<T>(moduleMap: {
+    [key: string]: TOptionalLazy<TInstantiable<T>>
+  }): Promise<{ [key: string]: T }>;
 
-  getInstances<T>(moduleFactory: Factory<T> | TRunnable<T> | InjectableIdentifier
-    | Array<InjectableIdentifier | Factory<T> | TRunnable<T>>
-    | { [key: string]: InjectableIdentifier | Factory<T> | TRunnable<T> }): Promise<T | T[] | { [key: string]: T }> {
+  getInstances<T>(
+    // dependencies: MyService
+    // dependencies: lazy(() => MyService)
+    moduleFactory: TOptionalLazy<TInstantiable<T>>
+      // dependencies: [MyService]
+      // dependencies: [lazy(() => MyService)]
+      | Array<TOptionalLazy<TInstantiable<T>>>
+      // dependencies: { myService: MyService }
+      // dependencies: { myService: lazy(() => MyService) }
+      | { [key: string]: TOptionalLazy<TInstantiable<T>> },
+  ): Promise<T | T[] | { [key: string]: T }> {
+    return this._getInstances(moduleFactory, []);
+  }
+
+  async getInstance<T>(buildableModule: TOptionalLazy<TInstantiable<T>>): Promise<T> {
+    return this._getInstance(buildableModule, []);
+  }
+
+  private async _getInstances<T>(
+    moduleFactory: TOptionalLazy<TInstantiable<T>>
+      | Array<TOptionalLazy<TInstantiable<T>>>
+      | { [key: string]: TOptionalLazy<TInstantiable<T>> },
+    dependencyChain: any[],
+  ) {
 
     if (moduleFactory == null) {
       throw new Error(`getInstances: received parameter is null`);
@@ -64,21 +88,19 @@ export default class DependencyInjector {
 
     if (Array.isArray(moduleFactory)) {
       return Promise.all(
-        moduleFactory.map(ClassItem => this.getInstance(ClassItem)),
+        moduleFactory.map(ClassItem => this._getInstance(ClassItem, dependencyChain)),
       );
     }
 
     if (typeof moduleFactory === 'object' && isPlainObject(moduleFactory)) {
-      return awaitAllEntries(
-        mapObject(moduleFactory, async (ClassItem: Factory<T> | TRunnable<T> | InjectableIdentifier, key: string) => {
-          try {
-            return await this.getInstance<T>(ClassItem);
-          } catch (e) {
-            // TODO: use .causedBy
-            throw new Error(`Failed to build ${key}: \n ${e.message}`);
-          }
-        }),
-      );
+      return awaitAllEntries(mapObject(moduleFactory, async (aClass: TOptionalLazy<TInstantiable<T>>, key: string) => {
+        try {
+          return await this._getInstance<T>(aClass, dependencyChain);
+        } catch (e) {
+          // TODO: use .causedBy
+          throw new Error(`Failed to build ${key}: \n ${e.message}`);
+        }
+      }));
     }
 
     assert(typeof moduleFactory === 'function');
@@ -86,10 +108,14 @@ export default class DependencyInjector {
     return this.getInstance<T>(moduleFactory);
   }
 
-  async getInstance<T>(buildableModule: InjectableIdentifier | Factory<T> | TRunnable<T>): Promise<T> {
+  private async _getInstance<T>(buildableModule: TOptionalLazy<TInstantiable<T>>, dependencyChain: any[]): Promise<T> {
     if (buildableModule == null) {
       // @ts-ignore - Class must be either null or undefined, symbol won't be an issue
       throw new Error(`Trying to get instance of invalid module: ${buildableModule}`);
+    }
+
+    if (isLazy(buildableModule)) {
+      buildableModule = buildableModule();
     }
 
     // runnables don't have IDs, we just run them with their requested dependencies every time we see them
@@ -112,13 +138,21 @@ export default class DependencyInjector {
       throw new Error(`Cannot instantiate dependency ${JSON.stringify(String(buildableModule))}: It has not been registered`);
     }
 
+    // this module is still building, cyclic dependency
+    if (dependencyChain.includes(buildableModule)) {
+      throw new CyclicDependencyError([...dependencyChain, buildableModule]);
+    }
+
+    const newDependencyChain = [...dependencyChain, buildableModule];
+
     // TODO: if classIdentifier is a class or a factory, that it is not a key in _idToFactoryMap, but that a string/symbol key is and points to this factory,
     //   throw because it means it hasn't been registered as default, but has been registered named and that ID should be used instead.
 
     const instancePromise = isFactory(factory)
-      ? this._createInstanceFactory(factory)
-      : this._createInstanceClass(factory);
+      ? this._createInstanceFactory(factory, newDependencyChain)
+      : this._createInstanceClass(factory, newDependencyChain);
 
+    // register aliases
     if (isFactory(factory)) {
       for (const id of factory.ids) {
         if (this._idToInstanceMap.has(id)) {
@@ -134,11 +168,11 @@ export default class DependencyInjector {
     return instancePromise;
   }
 
-  async _createInstanceFactory(factory: Factory<any>) {
-    return this.executeRunnable(factory.build);
+  private async _createInstanceFactory(factory: Factory<any>, dependencyChain: any[]) {
+    return this.executeRunnable(factory.build, dependencyChain);
   }
 
-  async executeRunnable<Return>(runnable: TRunnable<Return>): Promise<Return> {
+  async executeRunnable<Return>(runnable: TRunnable<Return>, dependencyChain: any[] = []): Promise<Return> {
     const run = runnable.run;
 
     if (!runnable.dependencies) {
@@ -147,7 +181,7 @@ export default class DependencyInjector {
 
     let instances;
     try {
-      instances = await this.getInstances(runnable.dependencies);
+      instances = await this._getInstances(runnable.dependencies, dependencyChain);
     } catch (e) {
       // TODO use .causedBy
       throw new Error(`Error while instantiating a Runnable's dependencies: \n ${e.message}`);
@@ -160,7 +194,7 @@ export default class DependencyInjector {
     return run(instances);
   }
 
-  async _createInstanceClass(aClass: Class<any>) {
+  private async _createInstanceClass(aClass: Class<any>, dependencyChain: any[]) {
 
     const initMeta = initMetaMap.get(aClass) || {};
 
@@ -168,7 +202,7 @@ export default class DependencyInjector {
 
     if (initMeta.dependencies) {
       try {
-        const dependencies = await this.getInstances(initMeta.dependencies);
+        const dependencies = await this._getInstances(initMeta.dependencies, dependencyChain);
         constructorArgs.push(dependencies);
       } catch (e) {
         // TODO use .causedBy
@@ -233,4 +267,18 @@ export function AsyncModuleInit(aClass, methodName) {
   }
 
   initMeta.asyncModuleInit = methodName;
+}
+
+class CyclicDependencyError extends Error {
+  constructor(steps) {
+    super(`Cyclic dependency detected: ${steps.map(step => getDepName(step)).join(' → ')}`);
+  }
+}
+
+function getDepName(item) {
+  if (typeof item === 'function' && item.constructor) {
+    return item.name;
+  }
+
+  return String(item);
 }
