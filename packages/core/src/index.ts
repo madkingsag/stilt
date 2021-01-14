@@ -2,6 +2,7 @@ import {
   asyncGlob,
 } from '@stilt/util';
 import Emittery from 'emittery';
+import createAnnotation, { getPropertyAnnotation } from './annotations';
 import DependencyInjector, { TInstantiable } from './dependency-injector';
 import { Factory } from './factory';
 import { TOptionalLazy } from './lazy';
@@ -19,6 +20,11 @@ export { factory, Factory, isFactory } from './factory';
 export { InjectableIdentifier } from './typing';
 export { lazy } from './lazy';
 
+export const AppEvents = Object.freeze({
+  Start: createAnnotation('Start', ['method-instance']),
+  Close: createAnnotation('Close', ['method-instance']),
+});
+
 export type Logger = Console;
 
 type Config = {
@@ -27,8 +33,8 @@ type Config = {
 };
 
 enum LifecycleEvents {
-  START = 'start',
-  CLOSE = 'close',
+  Start = 'start',
+  Close = 'close',
 }
 
 export class App {
@@ -37,7 +43,9 @@ export class App {
 
   public readonly lifecycle = new Emittery();
 
-  private _dependencyInjector = new DependencyInjector();
+  private _dependencyInjector = new DependencyInjector(newDependency => {
+    this._onDependencyInstanciation(newDependency);
+  });
 
   // private _injectablesGlob;
 
@@ -51,6 +59,21 @@ export class App {
     this._dependencyInjector.registerInstance(App, this);
   }
 
+  /**
+   * Register @AppEvents.Start & @AppEvents.Close listeners
+   */
+  private _onDependencyInstanciation(dependency: object) {
+    const startListeners = Object.keys(getPropertyAnnotation(dependency, AppEvents.Start));
+    for (const listenerKey of startListeners) {
+      this.lifecycle.on(LifecycleEvents.Start, () => dependency[listenerKey]());
+    }
+
+    const closeListeners = Object.keys(getPropertyAnnotation(dependency, AppEvents.Close));
+    for (const listenerKey of closeListeners) {
+      this.lifecycle.on(LifecycleEvents.Close, () => dependency[listenerKey]());
+    }
+  }
+
   makeLogger(_namespace: string, _config?: any) {
     // TODO use actual logger & namespace it.
     return console;
@@ -61,14 +84,14 @@ export class App {
    */
   async start() {
     // await this._findInjectables();
-    await this.lifecycle.emit(LifecycleEvents.START);
+    await this.lifecycle.emit(LifecycleEvents.Start);
   }
 
   /**
    * Closes the application
    */
   async close() {
-    await this.lifecycle.emit(LifecycleEvents.CLOSE);
+    await this.lifecycle.emit(LifecycleEvents.Close);
   }
 
   async executeRunnable<Return>(runnable: TRunnable<Return>): Promise<Return> {

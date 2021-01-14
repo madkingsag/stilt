@@ -21,6 +21,9 @@ export default class DependencyInjector {
   _idToFactoryMap = new Map<InjectableIdentifier, Factory<any> | Class<any>>();
   _idToInstanceMap = new Map<InjectableIdentifier | Factory<any>, any>();
 
+  constructor(private readonly _onNewDepCallback) {
+  }
+
   registerFactory(factory: Factory<any>) {
     for (const id of factory.ids) {
       if (this._idToFactoryMap.has(id) && this._idToFactoryMap.get(id) !== factory) {
@@ -165,7 +168,13 @@ export default class DependencyInjector {
 
     this._idToInstanceMap.set(factory, instancePromise);
 
-    return instancePromise;
+    const instance = await instancePromise;
+
+    if (this._onNewDepCallback) {
+      this._onNewDepCallback(instance);
+    }
+
+    return instance;
   }
 
   private async _createInstanceFactory(factory: Factory<any>, dependencyChain: any[]) {
