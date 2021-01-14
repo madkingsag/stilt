@@ -86,7 +86,7 @@ export default class DependencyInjector {
 
     // these are run first as they are POJOs with special logic
     if (isFactory(moduleFactory) || isRunnable(moduleFactory)) {
-      return this.getInstance<T>(moduleFactory);
+      return this._getInstance<T>(moduleFactory, dependencyChain);
     }
 
     if (Array.isArray(moduleFactory)) {
@@ -108,7 +108,7 @@ export default class DependencyInjector {
 
     assert(typeof moduleFactory === 'function');
 
-    return this.getInstance<T>(moduleFactory);
+    return this._getInstance<T>(moduleFactory, dependencyChain);
   }
 
   private async _getInstance<T>(buildableModule: TOptionalLazy<TInstantiable<T>>, dependencyChain: any[]): Promise<T> {
@@ -123,7 +123,7 @@ export default class DependencyInjector {
 
     // runnables don't have IDs, we just run them with their requested dependencies every time we see them
     if (isRunnable(buildableModule)) {
-      return this.executeRunnable(buildableModule);
+      return this.executeRunnable(buildableModule, dependencyChain);
     }
 
     // this module has already been built, return old version
@@ -228,22 +228,6 @@ export default class DependencyInjector {
 
     return instance;
   }
-
-  // @ts-ignore - https://github.com/microsoft/TypeScript/issues/1863
-  // registerModuleIds(map: { [key: string | symbol]: Promise<Class> | Class }) {
-  //   const descriptors = Object.getOwnPropertyDescriptors(map);
-  //
-  //   for (const key of Reflect.ownKeys(descriptors)) {
-  //     // @ts-ignore - https://github.com/microsoft/TypeScript/issues/1863
-  //     const descriptor = descriptors[key];
-  //
-  //     if (Object.prototype.hasOwnProperty.call(this._moduleMap, key)) {
-  //       throw new Error(`Dependency ${JSON.stringify(String(key))} has been registered twice.`);
-  //     }
-  //
-  //     Object.defineProperty(this._moduleMap, key, descriptor);
-  //   }
-  // }
 }
 
 export function Inject(dependencies) {
