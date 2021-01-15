@@ -45,6 +45,7 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
       // @ts-ignore
       await middleware(context, val => val);
 
+      // @ts-ignore
       return { [fileConfigs]: context.files };
     }
 
@@ -53,6 +54,7 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
     const middleware = multer.fields(keys.map(key => {
 
       const fileConfig = fileConfigs[key];
+      // @ts-ignore
       const field = fileConfig?.field ?? key;
 
       if (field !== key) {
@@ -69,9 +71,11 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
     try {
       // @ts-ignore
       await middleware(context, val => val);
+      // @ts-ignore
       files = context.files;
     } catch (e) {
       if (e.code === 'LIMIT_UNEXPECTED_FILE') {
+        // @ts-ignore
         const validFields = keys.map(key => fileConfigs[key]?.field ?? key);
         throw new RestError(`Unexpected file ${JSON.stringify(e.field)}. Accepted file fields are ${validFields.map(val => JSON.stringify(val)).join(', ')}`)
           .withCode('ERR_UNEXPECTED_FILE')
