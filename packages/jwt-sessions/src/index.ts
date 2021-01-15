@@ -77,6 +77,7 @@ export default class StiltJwtSessions {
 
     const koa = stiltHttp.koa;
 
+    // @ts-ignore
     koa.use(koaJwt({
       secret: config.secret,
       passthrough: true,

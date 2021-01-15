@@ -47,7 +47,7 @@ type TRuntimeOpts = {
   as?: string,
 };
 
-type TParameterInjector = TControllerInjector<[TValidators, TRuntimeOpts]>;
+type TParameterInjector = TControllerInjector<[validator: TValidators, options?: TRuntimeOpts]>;
 
 function makeParameterInjector(factoryOptions): TParameterInjector {
 

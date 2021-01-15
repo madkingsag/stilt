@@ -25,5 +25,8 @@
     "deep-freeze-strict": "^1.1.1",
     "lodash": "^4.17.15",
     "multer": "^1.4.2"
+  },
+  "devDependencies": {
+    "@types/koa__multer": "^2.0.2"
   }
 }

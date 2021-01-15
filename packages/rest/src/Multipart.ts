@@ -1,7 +1,5 @@
-// @flow
-
-import Multer from '@koa/multer';
-import { makeControllerInjector, IContextProvider } from '@stilt/http';
+import Multer, { Options as MulterOptions } from '@koa/multer';
+import { makeControllerInjector, IContextProvider, ContextProvider } from '@stilt/http';
 import RestError from './RestError';
 
 export type UploadedFile = {
@@ -13,13 +11,27 @@ export type UploadedFile = {
   size: number,
 };
 
+export type TFilesArgs = [
+  /**
+   * The file config can either be:
+   * - A file name (string): This fileName must match the multipart key and will be provided using the same key to the parameter bag.
+   * - A configuration object
+   */
+  fileConfigs: string | { [fileName: string]: number | { field?: string, maxCount?: number } },
+  multerConfig?: MulterOptions,
+];
+
+type TFilesDeps = {
+  contextProvider: ContextProvider,
+};
+
 // @Files(0, {
 //   avatar: { maxCount: 1 },
 //   file: 1, // equivalent to { maxCount: 1 }
 //   gallery: { maxCount: 1, field: 'gallery2' }
 // }, { limits: { fileSize: '2MB' } }) // get 3 files and store under avatar, file, gallery
 // @Files(0, 'files', { limits: { fileSize: '2MB' } }) // get all files and store under 'files' key
-export const Files = makeControllerInjector({
+export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
   dependencies: { contextProvider: IContextProvider },
   run: async (params, deps) => {
     const context = deps.contextProvider.getCurrentContext();
@@ -30,6 +42,7 @@ export const Files = makeControllerInjector({
 
     if (typeof fileConfigs === 'string') {
       const middleware = multer.any();
+      // @ts-ignore
       await middleware(context, val => val);
 
       return { [fileConfigs]: context.files };
@@ -54,6 +67,7 @@ export const Files = makeControllerInjector({
 
     let files;
     try {
+      // @ts-ignore
       await middleware(context, val => val);
       files = context.files;
     } catch (e) {
