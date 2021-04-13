@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { TRunnable, App, factory, isRunnable, runnable, InjectableIdentifier } from '@stilt/core';
+import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
 import StiltHttp from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
 import { maskErrors } from 'graphql-errors';
-import { makeExecutableSchema } from 'graphql-tools';
+import { mergeSchemas } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
-import { mergeTypes, mergeResolvers } from 'merge-graphql-schemas';
+import { mergeResolvers, mergeTypes } from 'merge-graphql-schemas';
 import { classToResolvers } from './ResolveDecorator';
 
 export {
@@ -96,9 +96,21 @@ export default class StiltGraphQl {
       return null;
     }
 
-    const schemasParts = await Promise.all(schemasFiles.map(readOrRequireFile));
+    const types = [];
+    const foundSchemas: string[] = [];
 
-    return mergeTypes(schemasParts);
+    const schemaFiles = await Promise.all(schemasFiles.map(readOrRequireFile));
+    for (const schemaFile of schemaFiles) {
+      for (const schemaFileEntry of Object.values(schemaFile)) {
+        if (typeof schemaFileEntry === 'string') {
+          foundSchemas.push(schemaFileEntry);
+        } else {
+          types.push(schemaFileEntry);
+        }
+      }
+    }
+
+    return [mergeTypes(foundSchemas), types];
   }
 
   private static async _loadResolvers(app: App, resolverGlob) {
@@ -108,7 +120,7 @@ export default class StiltGraphQl {
       return null;
     }
 
-    const resolverClasses = await Promise.all(resolverFiles.map(readOrRequireFile));
+    const resolverClasses = await Promise.all(resolverFiles.map(readOrDefaultRequireFile));
 
     // create an instance for each resolver
     const resolverInstances = await Promise.all(
@@ -142,20 +154,20 @@ export default class StiltGraphQl {
     const endpoint = coalesce(config.endpoint, '/graphql');
     const logger = app.makeLogger('graphql');
 
-    if (types == null) {
+    if (types == null || types.length === 0) {
       logger.info('GraphQL disabled as no schema has been found in project');
 
       return;
     }
 
-    if (resolvers == null) {
+    if (resolvers == null || resolvers.length === 0) {
       logger.info('GraphQL disabled as no resolver has been found in project');
 
       return;
     }
 
-    const schema = makeExecutableSchema({
-      typeDefs: types,
+    const schema = mergeSchemas({
+      schemas: types,
       resolvers,
       inheritResolversFromInterfaces: true,
     });
@@ -170,9 +182,17 @@ export default class StiltGraphQl {
   }
 }
 
-// TODO move to common "utils"
+async function readOrRequireFile(filePath) {
+  const ext = path.parse(filePath).ext;
 
-export function readOrRequireFile(filePath) {
+  if (ext === '.ts' || ext === '.js') {
+    return require(filePath);
+  }
+
+  return { default: await fs.promises.readFile(filePath, 'utf8') };
+}
+
+function readOrDefaultRequireFile(filePath) {
   const ext = path.parse(filePath).ext;
 
   if (ext === '.ts' || ext === '.js') {
