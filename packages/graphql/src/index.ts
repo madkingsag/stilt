@@ -4,7 +4,7 @@ import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } f
 import StiltHttp from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
 import { maskErrors } from 'graphql-errors';
-import { mergeSchemas } from 'graphql-tools';
+import { makeExecutableSchema, SchemaDirectiveVisitor, ExecutableSchemaTransformation, IDirectiveResolvers } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
 import { mergeResolvers, mergeTypes } from 'merge-graphql-schemas';
@@ -36,6 +36,12 @@ export type Config = {
   resolvers?: string,
   useGraphiql?: boolean,
   endpoint?: string,
+
+  schemaDirectives?: {
+    [name: string]: typeof SchemaDirectiveVisitor;
+  };
+  directiveResolvers?: IDirectiveResolvers;
+  schemaTransforms?: ExecutableSchemaTransformation[];
 };
 
 type IdentifierConfig = {
@@ -166,10 +172,15 @@ export default class StiltGraphQl {
       return;
     }
 
-    const schema = mergeSchemas({
-      schemas: types,
+    const schema = makeExecutableSchema({
+      typeDefs: types,
       resolvers,
       inheritResolversFromInterfaces: true,
+      allowUndefinedInResolve: false,
+
+      schemaDirectives: config.schemaDirectives,
+      directiveResolvers: config.directiveResolvers,
+      schemaTransforms: config.schemaTransforms,
     });
 
     maskErrors(schema);

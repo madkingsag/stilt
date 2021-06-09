@@ -16,12 +16,12 @@
     "@stilt/core": "^0.21.0-alpha.6",
     "@stilt/http": "^0.21.0-alpha.6",
     "@stilt/util": "^0.21.0-alpha.0",
-    "graphql": "^14.5.8",
+    "graphql": "^15.5.0",
     "graphql-errors": "^2.1.0",
-    "graphql-tools": "^4.0.5",
+    "graphql-tools": "^7.0.5",
     "koa-graphql": "^0.8.0",
     "koa-mount": "^4.0.0",
-    "lodash": "^4.17.15",
-    "merge-graphql-schemas": "^1.7.0"
+    "lodash": "^4.17.21",
+    "merge-graphql-schemas": "^1.7.8"
   }
 }
