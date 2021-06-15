@@ -3,17 +3,19 @@ import path from 'path';
 import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
 import StiltHttp from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
-import { GraphQLNamedType, GraphQLObjectType, GraphQLSchema, isNamedType, isType } from 'graphql';
-import { maskErrors } from 'graphql-errors';
+import { GraphQLNamedType, GraphQLObjectType, GraphQLSchema, isEnumType, isNamedType, isType } from 'graphql';
 import {
-  makeExecutableSchema,
-  SchemaDirectiveVisitor,
   ExecutableSchemaTransformation,
-  IDirectiveResolvers, mergeTypeDefs,
+  IDirectiveResolvers,
+  makeExecutableSchema,
+  mergeTypeDefs,
+  SchemaDirectiveVisitor,
 } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
 import { classToResolvers } from './ResolveDecorator';
+import { nanoid } from 'nanoid';
+import { IsDevError } from './graphql-errors';
 
 export {
   resolve,
@@ -32,15 +34,16 @@ export {
 } from './UserError';
 
 export {
-  UserError as DevError,
-  IsUserError as IsDevError,
-} from 'graphql-errors';
+  DevError,
+  IsDevError,
+} from './graphql-errors';
 
 export type Config = {
   schemas?: string,
   resolvers?: string,
   useGraphiql?: boolean,
   endpoint?: string,
+  onError?: (error: any, errorCode: string) => void,
 
   schemaDirectives?: {
     [name: string]: typeof SchemaDirectiveVisitor;
@@ -100,7 +103,7 @@ export default class StiltGraphQl {
     return new StiltGraphQl(app, stiltHttp, config, { types, resolvers }, secret);
   }
 
-  private static async _loadTypes(schemaGlob) {
+  private static async _loadTypes(schemaGlob: string) {
     const schemasFiles = await asyncGlob(schemaGlob);
 
     if (schemasFiles.length === 0) {
@@ -108,16 +111,7 @@ export default class StiltGraphQl {
     }
 
     const foundSchemas: string[] = [];
-    const foundTypes: GraphQLNamedType[] = [
-      new GraphQLObjectType({
-        name: 'Query',
-        fields: {},
-      }),
-      new GraphQLObjectType({
-        name: 'Mutation',
-        fields: {},
-      }),
-    ];
+    const foundNamedTypes: GraphQLNamedType[] = [];
 
     const schemaFiles = await Promise.all(schemasFiles.map(readOrRequireFile));
     for (const schemaFile of schemaFiles) {
@@ -125,7 +119,7 @@ export default class StiltGraphQl {
         if (typeof schemaFileEntry === 'string') {
           foundSchemas.push(schemaFileEntry);
         } else if (isNamedType(schemaFileEntry)) {
-          foundTypes.push(schemaFileEntry);
+          foundNamedTypes.push(schemaFileEntry);
         } else {
           throw new Error(`${schemaFile} exported a non-string, non-named type value`);
         }
@@ -137,13 +131,26 @@ export default class StiltGraphQl {
     }
 
     const namedTypeSchema = new GraphQLSchema({
-      types: foundTypes,
+      types: [
+        new GraphQLObjectType({
+          name: 'Query',
+          fields: {},
+        }),
+        new GraphQLObjectType({
+          name: 'Mutation',
+          fields: {},
+        }),
+        ...foundNamedTypes,
+      ],
     });
 
-    return mergeTypeDefs([namedTypeSchema, ...foundSchemas]);
+    return {
+      typeDefs: mergeTypeDefs([namedTypeSchema, ...foundSchemas]),
+      namedTypes: foundNamedTypes,
+    };
   }
 
-  private static async _loadResolvers(app: App, resolverGlob) {
+  private static async _loadResolvers(app: App, resolverGlob: string) {
     const resolverFiles = await asyncGlob(resolverGlob);
 
     if (resolverFiles.length === 0) {
@@ -202,7 +209,9 @@ export default class StiltGraphQl {
     const endpoint = coalesce(config.endpoint, '/graphql');
     const logger = app.makeLogger('graphql');
 
-    if (types == null) {
+    const { typeDefs, namedTypes } = types;
+
+    if (!typeDefs) {
       logger.info('GraphQL disabled as no schema has been found in project');
 
       return;
@@ -214,9 +223,26 @@ export default class StiltGraphQl {
       return;
     }
 
+    const namedTypeResolvers = {};
+    for (const type of namedTypes) {
+      if (isEnumType(type)) {
+        const sourceValueMap = type.toConfig().values;
+        const resolverValueMap = {};
+        for (const key of Object.keys(sourceValueMap)) {
+          resolverValueMap[key] = sourceValueMap[key].value;
+        }
+
+        namedTypeResolvers[type.name] = resolverValueMap;
+
+        continue;
+      }
+
+      namedTypeResolvers[type.name] = type;
+    }
+
     const schema = makeExecutableSchema({
-      typeDefs: types,
-      resolvers,
+      typeDefs,
+      resolvers: [...resolvers, namedTypeResolvers],
       inheritResolversFromInterfaces: true,
       allowUndefinedInResolve: false,
 
@@ -225,12 +251,27 @@ export default class StiltGraphQl {
       schemaTransforms: config.schemaTransforms,
     });
 
-    maskErrors(schema);
-
     server.declareEndpoint('GraphQL', endpoint);
     server.koa.use(mount(endpoint, graphqlHTTP({
       schema,
       graphiql: useGraphiql,
+      formatError: error => {
+        if (error[IsDevError]) {
+          return error;
+        }
+
+        const errorId = nanoid();
+        if (config.onError) {
+          config.onError(error, errorId);
+        }
+
+        console.error(error);
+
+        return {
+          message: `Internal Error`,
+          internalErrorId: errorId,
+        };
+      },
     })));
   }
 }
