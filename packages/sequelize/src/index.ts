@@ -119,6 +119,12 @@ export class StiltSequelize {
 
   private running: boolean = false;
 
+  private syncCompleteDeferred = deferred<void>();
+
+  get syncCompletePromise(): Promise<void> {
+    return this.syncCompleteDeferred.promise;
+  }
+
   constructor(app: App, config: Config, identifierConfig: IdentifierConfig, secret: Symbol) {
     if (secret !== theSecret) {
       throw new Error('You\'re trying to instantiate StiltSequelize incorrectly.\n'
@@ -181,6 +187,8 @@ export class StiltSequelize {
       await this.sequelize.sync(syncOptions);
     }
 
+    this.syncCompleteDeferred.resolve();
+
     this.logger.debug('Database Connection Ready');
   }
 
@@ -240,4 +248,14 @@ export function assertDialect(dialect: string): asserts dialect is Dialect {
   if (!isDialect(dialect)) {
     throw new Error(`${dialect} is not a valid dialect. Use one of the following values instead: ${validDialects.join(', ')}`);
   }
+}
+
+function deferred<T>(): { promise: Promise<T>, resolve: (val: T) => void } {
+  let resolve;
+
+  const promise = new Promise<T>(_resolve => {
+    resolve = _resolve;
+  });
+
+  return { promise, resolve };
 }
