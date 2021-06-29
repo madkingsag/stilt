@@ -13,8 +13,8 @@ import {
 } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
-import { classToResolvers } from './ResolveDecorator';
 import { nanoid } from 'nanoid';
+import { classToResolvers } from './ResolveDecorator';
 import { IsDevError } from './graphql-errors';
 
 export {
@@ -256,7 +256,8 @@ export default class StiltGraphQl {
       schema,
       graphiql: useGraphiql,
       formatError: error => {
-        if (error[IsDevError]) {
+        const originalError = error.originalError;
+        if (!originalError || error[IsDevError] || originalError[IsDevError]) {
           return error;
         }
 
