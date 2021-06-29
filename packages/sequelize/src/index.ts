@@ -166,7 +166,7 @@ export class StiltSequelize {
       app.registerInstance(Sequelize, this.sequelize);
     }
 
-    const modelDirectory = this.config.models || '**/*.entity.js';
+    const modelDirectory = this.config.models || '**/*.entity.{js,ts}';
     this.modelLoadingPromise = loadModels(modelDirectory, this.sequelize);
   }
 
