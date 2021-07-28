@@ -1,6 +1,6 @@
 {
   "name": "@stilt/rest",
-  "version": "0.21.0-alpha.6",
+  "version": "0.21.0-alpha.12",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@koa/multer": "^3.0.0",
-    "@stilt/core": "^0.21.0-alpha.6",
-    "@stilt/http": "^0.21.0-alpha.6",
+    "@stilt/core": "^0.21.0-alpha.12",
+    "@stilt/http": "^0.21.0-alpha.12",
     "@stilt/util": "^0.21.0-alpha.0",
     "@types/joi": "^14.3.4",
     "change-case": "^3.1.0",

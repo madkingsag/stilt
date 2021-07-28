@@ -1,6 +1,6 @@
 {
   "name": "@stilt/graphql",
-  "version": "0.21.0-alpha.11",
+  "version": "0.21.0-alpha.12",
   "description": "GraphQL Module for Stilt Framework",
   "main": "dist/index.js",
   "scripts": {
@@ -13,8 +13,8 @@
   "license": "MIT",
   "types": "types",
   "dependencies": {
-    "@stilt/core": "^0.21.0-alpha.6",
-    "@stilt/http": "^0.21.0-alpha.6",
+    "@stilt/core": "^0.21.0-alpha.12",
+    "@stilt/http": "^0.21.0-alpha.12",
     "@stilt/util": "^0.21.0-alpha.0",
     "graphql": "^15.5.0",
     "graphql-tools": "^7.0.5",
