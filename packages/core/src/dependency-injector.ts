@@ -1,12 +1,8 @@
 import assert from 'assert';
-import {
-  awaitAllEntries,
-  isPlainObject,
-  mapObject,
-} from '@stilt/util';
+import { awaitAllEntries, isPlainObject, mapObject } from '@stilt/util';
 import { Factory, isFactory } from './factory';
 import { isLazy, TOptionalLazy } from './lazy';
-import { TRunnable, isRunnable } from './runnables';
+import { isRunnable, TRunnable } from './runnables';
 import { Class, InjectableIdentifier } from './typing';
 
 const initMetaMap = new WeakMap();
@@ -244,10 +240,14 @@ export function Inject(dependencies) {
   };
 }
 
-export function AsyncModuleInit(aClass, methodName) {
+export function AsyncModuleInit(
+  aClass: Object,
+  methodName: string | symbol,
+  _descriptor: TypedPropertyDescriptor<any>,
+): TypedPropertyDescriptor<any> | void {
 
-  if (!aClass) {
-    return AsyncModuleInit;
+  if (typeof aClass !== 'function') {
+    throw new Error('@AsyncModuleInit can only be used on static class methods.');
   }
 
   if (!initMetaMap.has(aClass)) {
@@ -256,7 +256,7 @@ export function AsyncModuleInit(aClass, methodName) {
 
   const initMeta = initMetaMap.get(aClass);
   if (initMeta.asyncModuleInit) {
-    throw new Error(`@AsyncModuleInit has been defined twice on ${aClass.name}: [${initMeta.asyncModuleInit}, ${methodName}]`);
+    throw new Error(`@AsyncModuleInit has been defined twice on ${aClass.name}: [${initMeta.asyncModuleInit}, ${String(methodName)}]`);
   }
 
   initMeta.asyncModuleInit = methodName;
