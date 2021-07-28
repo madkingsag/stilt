@@ -3,13 +3,24 @@ import path from 'path';
 import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
 import StiltHttp from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
-import { GraphQLNamedType, GraphQLObjectType, GraphQLSchema, isEnumType, isNamedType, isType } from 'graphql';
+import {
+  GraphQLNamedType,
+  GraphQLObjectType,
+  GraphQLSchema,
+  isEnumType,
+  isNamedType,
+  isType,
+  GraphQLError,
+  Source, DocumentNode,
+} from 'graphql';
 import {
   ExecutableSchemaTransformation,
   IDirectiveResolvers,
   makeExecutableSchema,
   mergeTypeDefs,
   SchemaDirectiveVisitor,
+  IExecutableSchemaDefinition,
+  ITypeDefinitions,
 } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
@@ -39,8 +50,12 @@ export {
 } from './graphql-errors';
 
 export type Config = {
-  schemas?: string,
-  resolvers?: string,
+  typeDefsGlob?: string,
+  resolversGlob?: string,
+
+  typeDefs?: IExecutableSchemaDefinition['typeDefs'],
+  resolvers?: IExecutableSchemaDefinition['resolvers']
+
   useGraphiql?: boolean,
   endpoint?: string,
   onError?: (error: any, errorCode: string) => void,
@@ -92,18 +107,26 @@ export default class StiltGraphQl {
 
   private static async asyncModuleInit(app: App, stiltHttp: StiltHttp, config: Config, secret: symbol) {
 
-    const schemaGlob = config.schemas || '**/*.+(schema.{js,ts}|graphqls)';
-    const resolverGlob = config.resolvers || '**/*.resolver.{js,ts}';
+    const schemaGlob = config.typeDefsGlob || '**/*.+(schema.{js,ts}|graphqls)';
+    const resolverGlob = config.resolversGlob || '**/*.resolver.{js,ts}';
 
     const [types, resolvers] = await Promise.all([
-      this._loadTypes(schemaGlob),
+      this._loadTypes(schemaGlob, config.typeDefs),
       this._loadResolvers(app, resolverGlob),
     ]);
+
+    if (config.resolvers) {
+      if (Array.isArray(config.resolvers)) {
+        resolvers.push(...config.resolvers);
+      } else {
+        resolvers.push(config.resolvers);
+      }
+    }
 
     return new StiltGraphQl(app, stiltHttp, config, { types, resolvers }, secret);
   }
 
-  private static async _loadTypes(schemaGlob: string) {
+  private static async _loadTypes(schemaGlob: string, extraTypeDefs: ITypeDefinitions | undefined) {
     const schemasFiles = await asyncGlob(schemaGlob);
 
     if (schemasFiles.length === 0) {
@@ -144,8 +167,23 @@ export default class StiltGraphQl {
       ],
     });
 
+    const allTypeDefs: Array<string | Source | DocumentNode | GraphQLSchema> = [namedTypeSchema, ...foundSchemas];
+    if (extraTypeDefs) {
+      if (Array.isArray(extraTypeDefs)) {
+        for (const type of extraTypeDefs) {
+          if (typeof type === 'function') {
+            throw new Error('function typedef is not currently supported.');
+          }
+
+          allTypeDefs.push(type);
+        }
+      } else {
+        allTypeDefs.push(extraTypeDefs);
+      }
+    }
+
     return {
-      typeDefs: mergeTypeDefs([namedTypeSchema, ...foundSchemas]),
+      typeDefs: mergeTypeDefs(allTypeDefs),
       namedTypes: foundNamedTypes,
     };
   }
@@ -257,7 +295,7 @@ export default class StiltGraphQl {
       graphiql: useGraphiql,
       formatError: error => {
         const originalError = error.originalError;
-        if (!originalError || error[IsDevError] || originalError[IsDevError]) {
+        if (!originalError || originalError instanceof GraphQLError || error[IsDevError] || originalError[IsDevError]) {
           return error;
         }
 
