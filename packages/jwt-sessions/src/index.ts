@@ -147,7 +147,7 @@ type WithSessionOptions = {
 
 const withSession = makeControllerInjector({
   dependencies: [StiltJwtSessions],
-  run([options]: [WithSessionOptions], [provider]: [StiltJwtSessions]) {
+  run([options]: [options?: WithSessionOptions], [provider]: [StiltJwtSessions]) {
     return ({ [options?.key ?? 'session']: provider.getCurrentSession() });
   },
 });
