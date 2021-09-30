@@ -21,6 +21,9 @@ module.exports = {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
       '@babel/eslint-parser': ['.js', '.jsx', '.mjs'],
     },
+    'import/resolver': {
+      typescript: {},
+    },
   },
   overrides: [{
     files: ['*.ts', '*.tsx'],

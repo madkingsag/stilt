@@ -4,13 +4,13 @@ import type { Class } from '@stilt/core/types/typing';
 import { StiltHttp } from '@stilt/http';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 import { asyncGlob } from '@stilt/util';
-import { getRoutingMetadata } from './HttpMethodsDecorators';
-import { IsRestError } from './RestError';
+import { getRoutingMetadata } from './HttpMethodsDecorators.js';
+import { IsRestError } from './RestError.js';
 
-export * from './HttpMethodsDecorators';
-export { default as RestError, IsRestError } from './RestError';
-export { PathParams, QueryParams, BodyParams, PathParams as pathParams, QueryParams as queryParams, BodyParams as bodyParams } from './ParameterDecorators';
-export { Files } from './Multipart';
+export * from './HttpMethodsDecorators.js';
+export { default as RestError, IsRestError } from './RestError.js';
+export { PathParams, QueryParams, BodyParams, PathParams as pathParams, QueryParams as queryParams, BodyParams as bodyParams } from './ParameterDecorators.js';
+export { Files } from './Multipart.js';
 export type { UploadedFile } from './Multipart';
 
 export interface JsonSerializer<T> {

@@ -3,8 +3,9 @@
 module.exports = {
   presets: [
     ['@babel/preset-env', {
+      modules: false,
       targets: {
-        node: '12.18.3',
+        node: '14.18.0',
       },
     }],
     '@babel/preset-typescript',

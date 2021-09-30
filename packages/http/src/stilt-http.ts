@@ -6,7 +6,7 @@ import ip from 'ip';
 import Koa from 'koa';
 import Router from 'koa-better-router'; // TODO: replace with @koa/router
 import bodyParser from 'koa-bodyparser';
-import { ContextProvider, IContextProvider } from './ContextProvider';
+import { ContextProvider, IContextProvider } from './ContextProvider.js';
 
 type Config = {
   port: number,

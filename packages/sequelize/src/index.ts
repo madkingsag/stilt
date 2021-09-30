@@ -4,7 +4,7 @@ import { isRunnable, runnable, factory, App } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
 import type { Dialect, SyncOptions } from 'sequelize';
 import { Sequelize } from 'sequelize';
-import { getAssociationMeta, getModelInitData } from './decorators';
+import { getAssociationMeta, getModelInitData } from './decorators.js';
 
 export {
   BelongsTo,
@@ -27,7 +27,7 @@ export {
 
   HasOne,
   hasOne,
-} from './decorators';
+} from './decorators.js';
 
 export type {
   HasOneAssociationOptions,
@@ -36,7 +36,7 @@ export type {
   BelongsToManyAssociationOptions,
 } from './decorators';
 
-export { withTransaction, getCurrentTransaction } from './transactions';
+export { withTransaction, getCurrentTransaction } from './transactions.js';
 
 type Config = {
   namespace?: string,

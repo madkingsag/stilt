@@ -1,24 +1,25 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
+    "target": "ES2021",
     "declaration": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "removeComments": true,
     "noLib": false,
-    "allowSyntheticDefaultImports": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "alwaysStrict": true,
-    "target": "es6",
     "sourceMap": true,
     "outDir": "./.build",
     "baseUrl": "./app",
-    "lib": ["ES2020", "dom", "esnext", "dom.iterable"],
-    "resolveJsonModule": true,
+    "lib": ["ES2021", "dom", "esnext", "dom.iterable"],
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": false,
     "esModuleInterop": true,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "moduleResolution": "Node"
   },
   "include": [
     "packages/**/src/**/*"

@@ -30,8 +30,8 @@ import {
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
 import { nanoid } from 'nanoid';
-import { classToResolvers } from './ResolveDecorator';
-import { IsDevError } from './graphql-errors';
+import { classToResolvers } from './ResolveDecorator.js';
+import { IsDevError } from './graphql-errors.js';
 
 export {
   resolve,
@@ -39,7 +39,7 @@ export {
 
   withGraphqlQuery,
   withGraphqlQuery as WithGraphqlQuery,
-} from './ResolveDecorator';
+} from './ResolveDecorator.js';
 
 export {
   throwsUserErrors,
@@ -47,12 +47,12 @@ export {
 
   UserError,
   IsUserError,
-} from './UserError';
+} from './UserError.js';
 
 export {
   DevError,
   IsDevError,
-} from './graphql-errors';
+} from './graphql-errors.js';
 
 export type Config = {
   typeDefsGlob?: string,

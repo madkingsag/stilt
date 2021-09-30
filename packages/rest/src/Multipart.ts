@@ -1,7 +1,7 @@
 import type { Options as MulterOptions } from '@koa/multer';
 import Multer from '@koa/multer';
 import { makeControllerInjector, StiltHttp } from '@stilt/http';
-import RestError from './RestError';
+import RestError from './RestError.js';
 
 export type UploadedFile = {
   fieldname: string,

@@ -1,11 +1,11 @@
 import assert from 'assert';
 import { awaitAllEntries, isPlainObject, mapObject } from '@stilt/util';
 import type { Factory } from './factory';
-import { isFactory } from './factory';
+import { isFactory } from './factory.js';
 import type { TOptionalLazy } from './lazy';
-import { isLazy } from './lazy';
+import { isLazy } from './lazy.js';
 import type { TRunnable } from './runnables';
-import { isRunnable } from './runnables';
+import { isRunnable } from './runnables.js';
 import type { Class, InjectableIdentifier } from './typing';
 
 const initMetaMap = new WeakMap();

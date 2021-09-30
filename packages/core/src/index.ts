@@ -2,9 +2,9 @@ import {
   asyncGlob,
 } from '@stilt/util';
 import Emittery from 'emittery';
-import createAnnotation, { getPropertyAnnotation } from './annotations';
+import createAnnotation, { getPropertyAnnotation } from './annotations.js';
 import type { TInstantiable } from './dependency-injector';
-import DependencyInjector from './dependency-injector';
+import DependencyInjector from './dependency-injector.js';
 import type { Factory } from './factory';
 import type { TOptionalLazy } from './lazy';
 import type { TRunnable } from './runnables';
@@ -15,11 +15,11 @@ export {
   Inject,
   Inject as inject,
   AsyncModuleInit as asyncModuleInit,
-} from './dependency-injector';
-export { runnable, TRunnable, isRunnable } from './runnables';
-export { factory, Factory, isFactory } from './factory';
-export { InjectableIdentifier } from './typing';
-export { lazy } from './lazy';
+} from './dependency-injector.js';
+export { runnable, TRunnable, isRunnable } from './runnables.js';
+export { factory, Factory, isFactory } from './factory.js';
+export { InjectableIdentifier } from './typing.js';
+export { lazy } from './lazy.js';
 
 export const AppEvents = Object.freeze({
   Start: createAnnotation('Start', ['method-instance']),

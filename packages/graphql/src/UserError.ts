@@ -1,4 +1,4 @@
-import { addPostResolver } from './ResolveDecorator';
+import { addPostResolver } from './ResolveDecorator.js';
 
 export const IsUserError = Symbol('is-user-error');
 

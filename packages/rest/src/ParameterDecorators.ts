@@ -2,7 +2,7 @@ import { makeControllerInjector, StiltHttp } from '@stilt/http';
 import type { TControllerInjector } from '@stilt/http/types/controllerInjectors';
 import { isPlainObject } from '@stilt/util';
 import type { Schema as JoiSchema } from 'joi';
-import RestError from './RestError';
+import RestError from './RestError.js';
 
 let Joi;
 
