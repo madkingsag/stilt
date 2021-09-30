@@ -1,6 +1,6 @@
 {
   "name": "@stilt/core",
-  "version": "0.21.0-alpha.12",
+  "version": "0.21.0-alpha.13",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "type": "module",
@@ -14,7 +14,7 @@
   "license": "MIT",
   "types": "types",
   "dependencies": {
-    "@stilt/util": "^0.21.0-alpha.0",
+    "@stilt/util": "^0.21.0-alpha.13",
     "emittery": "^0.7.1"
   }
 }
