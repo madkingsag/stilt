@@ -1,6 +1,6 @@
-import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
 import { isPlainObject } from '@stilt/util';
-import setProperty from 'lodash/set';
+import setProperty from 'lodash/set.js';
 
 const Meta = Symbol('graphql-meta');
 

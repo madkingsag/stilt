@@ -16,9 +16,11 @@ export {
   Inject as inject,
   AsyncModuleInit as asyncModuleInit,
 } from './dependency-injector.js';
-export { runnable, TRunnable, isRunnable } from './runnables.js';
-export { factory, Factory, isFactory } from './factory.js';
-export { InjectableIdentifier } from './typing.js';
+export { runnable, isRunnable } from './runnables.js';
+export type { TRunnable } from './runnables';
+export { factory, isFactory } from './factory.js';
+export type { Factory } from './factory';
+export type { InjectableIdentifier } from './typing';
 export { lazy } from './lazy.js';
 
 export const AppEvents = Object.freeze({

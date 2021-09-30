@@ -5,7 +5,7 @@ import { StiltHttp, makeControllerInjector } from '@stilt/http';
 import jwt from 'jsonwebtoken';
 import type { Options as KoaJwtOptions } from 'koa-jwt';
 import koaJwt from 'koa-jwt';
-import cloneDeep from 'lodash/cloneDeep';
+import cloneDeep from 'lodash/cloneDeep.js';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)

@@ -2,7 +2,7 @@ import type { InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
 import type { Class } from '@stilt/core/types/typing';
 import { StiltHttp } from '@stilt/http';
-import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
 import { asyncGlob } from '@stilt/util';
 import { getRoutingMetadata } from './HttpMethodsDecorators.js';
 import { IsRestError } from './RestError.js';
