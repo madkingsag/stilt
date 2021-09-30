@@ -1,5 +1,5 @@
-import { TRunnable } from './runnables';
-import { InjectableIdentifier } from './typing';
+import type { TRunnable } from './runnables';
+import type { InjectableIdentifier } from './typing';
 
 const IsFactory = Symbol('is-factory');
 

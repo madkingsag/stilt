@@ -5,24 +5,24 @@ const CONTROLLER_INJECTORS = Symbol('controller-injector-meta');
 
 type TInjectorDeps = any[] | { [key: string]: any };
 
-type InjectorFactoryOptions<Params extends Array<any>, Dependencies extends TInjectorDeps> = {
+type InjectorFactoryOptions<Params extends any[], Dependencies extends TInjectorDeps> = {
   dependencies?: { [k in keyof Dependencies]: InjectableIdentifier },
-  run: (
+  run(
     /* runtime parameters */
     parameters: Params,
     /* dependencies declared in dependencies property */
     dependencies?: Dependencies
-  ) => { [key: string]: any },
+  ): { [key: string]: any },
 };
 
-type InjectorMeta<Params extends Array<any>, Dependencies extends TInjectorDeps> = {
+type InjectorMeta<Params extends any[], Dependencies extends TInjectorDeps> = {
   parameterNum: number,
   options: any,
   valueProvider: InjectorFactoryOptions<Params, Dependencies>['run'],
-  dependencies: InjectorFactoryOptions<Params, Dependencies>['dependencies']
+  dependencies: InjectorFactoryOptions<Params, Dependencies>['dependencies'],
 };
 
-function addControllerInjector<Params extends Array<any>, Dependencies extends TInjectorDeps>(
+function addControllerInjector<Params extends any[], Dependencies extends TInjectorDeps>(
   Class: Function,
   methodName: string,
   parameterNum,
@@ -44,11 +44,11 @@ function addControllerInjector<Params extends Array<any>, Dependencies extends T
   });
 }
 
-export type TControllerInjector<T extends Array<any>> = (parameterPos: number, ...parameters: T) => MethodDecorator;
+export type TControllerInjector<T extends any[]> = (parameterPos: number, ...parameters: T) => MethodDecorator;
 
 export function makeControllerInjector<
-  Args extends Array<any>,
-  Deps extends TInjectorDeps
+  Args extends any[],
+  Deps extends TInjectorDeps,
 >(injector: InjectorFactoryOptions<Args, Deps>): TControllerInjector<Args> {
 
   return function createConfiguredDecorator(parameterNum: number, ...injectorParameters: Args): MethodDecorator {
@@ -59,7 +59,7 @@ export function makeControllerInjector<
   };
 }
 
-function instantiateDependencyTable(stiltApp: App, table) {
+async function instantiateDependencyTable(stiltApp: App, table) {
   return stiltApp.instantiate(table);
 }
 
@@ -103,7 +103,7 @@ export function wrapControllerWithInjectors(
 
     await Promise.all(promises);
 
-    // eslint-disable-next-line babel/no-invalid-this
+    // eslint-disable-next-line @typescript-eslint/no-invalid-this
     return wrappedMethod.apply(this, methodParameters);
   };
 }

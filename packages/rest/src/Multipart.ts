@@ -1,5 +1,6 @@
-import Multer, { Options as MulterOptions } from '@koa/multer';
-import { makeControllerInjector, IContextProvider, ContextProvider } from '@stilt/http';
+import type { Options as MulterOptions } from '@koa/multer';
+import Multer from '@koa/multer';
+import { makeControllerInjector, StiltHttp } from '@stilt/http';
 import RestError from './RestError';
 
 export type UploadedFile = {
@@ -22,7 +23,7 @@ export type TFilesArgs = [
 ];
 
 type TFilesDeps = {
-  contextProvider: ContextProvider,
+  contextProvider: StiltHttp,
 };
 
 // @Files(0, {
@@ -32,7 +33,7 @@ type TFilesDeps = {
 // }, { limits: { fileSize: '2MB' } }) // get 3 files and store under avatar, file, gallery
 // @Files(0, 'files', { limits: { fileSize: '2MB' } }) // get all files and store under 'files' key
 export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
-  dependencies: { contextProvider: IContextProvider },
+  dependencies: { contextProvider: StiltHttp },
   run: async (params, deps) => {
     const context = deps.contextProvider.getCurrentContext();
 
@@ -42,10 +43,10 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
 
     if (typeof fileConfigs === 'string') {
       const middleware = multer.any();
-      // @ts-ignore
+      // @ts-expect-error
       await middleware(context, val => val);
 
-      // @ts-ignore
+      // @ts-expect-error
       return { [fileConfigs]: context.files };
     }
 
@@ -54,7 +55,7 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
     const middleware = multer.fields(keys.map(key => {
 
       const fileConfig = fileConfigs[key];
-      // @ts-ignore
+      // @ts-expect-error
       const field = fileConfig?.field ?? key;
 
       if (field !== key) {
@@ -69,13 +70,13 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
 
     let files;
     try {
-      // @ts-ignore
+      // @ts-expect-error
       await middleware(context, val => val);
-      // @ts-ignore
+      // @ts-expect-error
       files = context.files;
     } catch (e) {
       if (e.code === 'LIMIT_UNEXPECTED_FILE') {
-        // @ts-ignore
+        // @ts-expect-error
         const validFields = keys.map(key => fileConfigs[key]?.field ?? key);
         throw new RestError(`Unexpected file ${JSON.stringify(e.field)}. Accepted file fields are ${validFields.map(val => JSON.stringify(val)).join(', ')}`)
           .withCode('ERR_UNEXPECTED_FILE')

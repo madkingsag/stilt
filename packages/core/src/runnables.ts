@@ -1,9 +1,9 @@
-import { InjectableIdentifier } from './typing';
+import type { InjectableIdentifier } from './typing';
 
 const IsRunnable = Symbol('is-runnable');
 
 export type RunnableArgs<Return> = {
-  run: (...deps: any[]) => Return,
+  run(...deps: any[]): Return,
   dependencies: Array<TRunnable<any> | InjectableIdentifier>,
 };
 

@@ -1,7 +1,9 @@
 import { URL } from 'url';
-import { isRunnable, runnable, factory, App, TRunnable, Logger, InjectableIdentifier, Factory } from '@stilt/core';
+import type { TRunnable, Logger, InjectableIdentifier, Factory } from '@stilt/core';
+import { isRunnable, runnable, factory, App } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
-import { Dialect, Sequelize, SyncOptions } from 'sequelize';
+import type { Dialect, SyncOptions } from 'sequelize';
+import { Sequelize } from 'sequelize';
 import { getAssociationMeta, getModelInitData } from './decorators';
 
 export {
@@ -87,12 +89,12 @@ export class StiltSequelize {
   static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltSequelize> {
     const getConfig = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers: Array<InjectableIdentifier> = [
+    const identifiers: InjectableIdentifier[] = [
       identifierConfig?.identifiers?.['stilt-sequelize'] ?? 'stilt-sequelize',
     ];
 
     // this module also declares a secondary 'sequelize' module. This module should be init if that secondary module is required
-    const registering: Array<InjectableIdentifier> = [
+    const registering: InjectableIdentifier[] = [
       identifierConfig?.identifiers?.sequelize ?? 'sequelize',
     ];
 
@@ -119,7 +121,8 @@ export class StiltSequelize {
 
   private running: boolean = false;
 
-  private syncCompleteDeferred = deferred<void>();
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  private readonly syncCompleteDeferred = deferred<void>();
 
   get syncCompletePromise(): Promise<void> {
     return this.syncCompleteDeferred.promise;
@@ -137,8 +140,8 @@ export class StiltSequelize {
       namespace: (config.namespace || 'stilt-sequelize'),
     };
 
-    app.lifecycle.on('start', () => this.start());
-    app.lifecycle.on('close', () => this.close());
+    app.lifecycle.on('start', async () => this.start());
+    app.lifecycle.on('close', async () => this.close());
 
     this.logger = app.makeLogger('sequelize');
     const uri = new URL(this.config.databaseUri);
@@ -206,16 +209,16 @@ async function loadModels(modelsGlob, sequelize) {
 
   const modelFiles = await asyncGlob(modelsGlob);
 
-  const models = modelFiles.map(file => {
-    const module = require(file);
-    const model = module.default || module;
+  const models = await Promise.all(modelFiles.map(async file => {
+    const modelModule = await import(file);
+    const model = modelModule.default;
 
     if (typeof model !== 'function') {
       throw new Error(`Could not load Sequelize Model in file ${file}. Make sure a Class is exported`);
     }
 
     return model;
-  });
+  }));
 
   // init models
   for (const model of models) {
@@ -250,7 +253,7 @@ export function assertDialect(dialect: string): asserts dialect is Dialect {
   }
 }
 
-function deferred<T>(): { promise: Promise<T>, resolve: (val: T) => void } {
+function deferred<T>(): { promise: Promise<T>, resolve(val: T): void } {
   let resolve;
 
   const promise = new Promise<T>(_resolve => {

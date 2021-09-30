@@ -16,7 +16,7 @@ export function isPlainObject(obj: any): obj is Object {
   return proto == null || proto === Object.prototype;
 }
 
-export function asyncGlob(path: string, options: Object = {}): Promise<string[]> {
+export async function asyncGlob(path: string, options: Object = {}): Promise<string[]> {
   return new Promise((resolve, reject) => {
 
     const newOptions = {

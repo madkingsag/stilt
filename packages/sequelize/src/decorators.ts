@@ -12,11 +12,11 @@ import type {
 
 const METADATA = Symbol('stilt-sequelize-metadata');
 
-type SequelizeAs = string | { singular: string; plural: string };
+type SequelizeAs = string | { singular: string, plural: string };
 
 type AssociationType = string;
 
-type AssociationOptions = BelongsToAssociationOptions| HasOneAssociationOptions
+type AssociationOptions = BelongsToAssociationOptions | HasOneAssociationOptions
   | HasManyAssociationOptions | BelongsToManyAssociationOptions;
 
 type GetSymmetricalAssociationFunc = (AssociationOptions) => null | ({
@@ -105,7 +105,7 @@ function tagAssociation(model, associationMeta: AssociationTag) {
 }
 
 interface PureFunction {
-  (): any
+  (): any;
 }
 
 function isPureFunction(func: Function): func is PureFunction {
@@ -146,7 +146,7 @@ type BelongsToAssociationOptions = SequelizeBelongsToOptions & {
     type: 'many' | 'one',
     as: SequelizeAs,
     scope?: boolean, // ONLY IF "many"
-    sourceKey?: string // ONLY IF "many"
+    sourceKey?: string, // ONLY IF "many"
   },
 };
 
@@ -250,7 +250,7 @@ type HasOneAssociationOptions = SequelizeHasOneOptions & {
   inverse?: {
     as: SequelizeAs,
   },
-}
+};
 
 /*
  * @HasOne(B, optSource = {

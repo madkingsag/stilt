@@ -1,8 +1,10 @@
 import util from 'util';
-import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable, Factory } from '@stilt/core';
-import StiltHttp, { makeControllerInjector } from '@stilt/http';
+import type { InjectableIdentifier, TRunnable, Factory } from '@stilt/core';
+import { App, factory, isRunnable, runnable } from '@stilt/core';
+import { StiltHttp, makeControllerInjector } from '@stilt/http';
 import jwt from 'jsonwebtoken';
-import koaJwt, { Options as KoaJwtOptions } from 'koa-jwt';
+import type { Options as KoaJwtOptions } from 'koa-jwt';
+import koaJwt from 'koa-jwt';
 import cloneDeep from 'lodash/cloneDeep';
 
 // TODO support secret, audience, issuer, etc from koa-jwt
@@ -28,14 +30,13 @@ type IdentifierConfig = {
   defaultModule?: boolean,
 };
 
-export default class StiltJwtSessions {
+export class StiltJwtSessions {
 
-  static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig)
-    : Factory<StiltJwtSessions> {
+  static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltJwtSessions> {
 
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers: Array<InjectableIdentifier> = [
+    const identifiers: InjectableIdentifier[] = [
       identifierConfig?.identifier ?? 'stilt-jwt',
     ];
 
@@ -77,7 +78,6 @@ export default class StiltJwtSessions {
 
     const koa = stiltHttp.koa;
 
-    // @ts-ignore
     koa.use(koaJwt({
       secret: config.secret,
       passthrough: true,
@@ -143,7 +143,7 @@ export default class StiltJwtSessions {
 
 type WithSessionOptions = {
   key?: string,
-}
+};
 
 const withSession = makeControllerInjector({
   dependencies: [StiltJwtSessions],

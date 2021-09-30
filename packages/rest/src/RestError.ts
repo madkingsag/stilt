@@ -8,7 +8,7 @@ export default class RestError extends Error {
   status: number = 400;
   path: undefined | string[];
 
-  withCode(code: string | number): RestError {
+  withCode(code: string | number): this {
     this.code = code;
 
     return this;

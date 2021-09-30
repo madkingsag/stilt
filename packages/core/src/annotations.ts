@@ -1,5 +1,5 @@
 type TAnnotationMap = WeakMap<Function, {
-  constructor?: Array<any>,
+  constructor?: any[],
   [key: string]: any[],
 }>;
 
@@ -38,7 +38,7 @@ export default function createAnnotation(name, validPositions: TAnnotationType[]
 
       const annotations: TAnnotationMap = annotationMap.get(classOrPrototype);
       if (!annotations.has(annotation)) {
-        // @ts-ignore
+        // @ts-expect-error
         annotations.set(annotation, {});
       }
 

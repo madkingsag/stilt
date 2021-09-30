@@ -12,7 +12,7 @@ export class UserError extends Error {
     this[IsUserError] = true;
   }
 
-  withCode(code: string): UserError {
+  withCode(code: string): this {
     this._code = code;
 
     return this;

@@ -1,6 +1,7 @@
-import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
+import type { InjectableIdentifier, TRunnable } from '@stilt/core';
+import { App, factory, isRunnable, runnable } from '@stilt/core';
 import type { Class } from '@stilt/core/types/typing';
-import StiltHttp from '@stilt/http';
+import { StiltHttp } from '@stilt/http';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors';
 import { asyncGlob } from '@stilt/util';
 import { getRoutingMetadata } from './HttpMethodsDecorators';
@@ -31,16 +32,16 @@ type IdentifierConfig = {
 
 type Config = {
   controllers?: string,
-}
+};
 
 const theSecret = Symbol('secret');
 
-export default class StiltRest {
+export class StiltRest {
 
   static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers: Array<InjectableIdentifier> = [
+    const identifiers: InjectableIdentifier[] = [
       identifierConfig?.identifier ?? 'stilt-rest',
     ];
 
@@ -144,20 +145,21 @@ export default class StiltRest {
   private static async loadControllers(app: App, schemaGlob: string) {
     const controllers = await asyncGlob(schemaGlob);
 
-    const apiClasses = [];
-    for (const controllerPath of Object.values(controllers)) {
-      const controllerModule = require(controllerPath);
-      const controllerClass = controllerModule.default || controllerModule;
+    const apiClasses = (await Promise.all(
+      Object.values(controllers).map(async controllerPath => {
+        const controllerModule = await import(controllerPath);
+        const controllerClass = controllerModule.default;
 
-      if (controllerClass == null || (typeof controllerClass !== 'function' && typeof controllerClass !== 'object')) {
-        continue;
-      }
+        if (controllerClass == null || (typeof controllerClass !== 'function' && typeof controllerClass !== 'object')) {
+          return null;
+        }
 
-      apiClasses.push(controllerClass);
-    }
+        return controllerClass;
+      }),
+    )).filter(controllerClass => controllerClass != null);
 
     const apiInstances = await Promise.all(
-      apiClasses.map(resolverClass => {
+      apiClasses.map(async resolverClass => {
         if (typeof resolverClass === 'function') {
           return app.instantiate(resolverClass);
         }

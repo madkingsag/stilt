@@ -1,5 +1,5 @@
-import { makeControllerInjector, IContextProvider, ContextProvider } from '@stilt/http';
-import { TControllerInjector } from '@stilt/http/types/controllerInjectors';
+import { makeControllerInjector, StiltHttp } from '@stilt/http';
+import type { TControllerInjector } from '@stilt/http/types/controllerInjectors';
 import { isPlainObject } from '@stilt/util';
 import type { Schema as JoiSchema } from 'joi';
 import RestError from './RestError';
@@ -8,7 +8,7 @@ let Joi;
 
 try {
   // TODO: either force dep or move to top-level await + import()
-  Joi = require('joi');
+  Joi = await import('joi');
 } catch (ignore) { /* ignore */ }
 
 function runValidation(paramValue, paramValidator, parameterSource, context, validationOpts, errorStatus) {
@@ -41,7 +41,7 @@ function runValidation(paramValue, paramValidator, parameterSource, context, val
   return validation.value;
 }
 
-type TValidators = JoiSchema | Array<string> | { [key: string]: JoiSchema };
+type TValidators = JoiSchema | string[] | { [key: string]: JoiSchema };
 
 type TRuntimeOpts = {
   as?: string,
@@ -57,10 +57,10 @@ function makeParameterInjector(factoryOptions): TParameterInjector {
   };
 
   return makeControllerInjector({
-    dependencies: { contextProvider: IContextProvider },
+    dependencies: { contextProvider: StiltHttp },
     run(
       [validators, runtimeOptions]: [TValidators, TRuntimeOpts],
-      { contextProvider }: { contextProvider: ContextProvider },
+      { contextProvider }: { contextProvider: StiltHttp },
     ) {
 
       const context = contextProvider.getCurrentContext();

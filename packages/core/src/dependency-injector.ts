@@ -1,9 +1,12 @@
 import assert from 'assert';
 import { awaitAllEntries, isPlainObject, mapObject } from '@stilt/util';
-import { Factory, isFactory } from './factory';
-import { isLazy, TOptionalLazy } from './lazy';
-import { isRunnable, TRunnable } from './runnables';
-import { Class, InjectableIdentifier } from './typing';
+import type { Factory } from './factory';
+import { isFactory } from './factory';
+import type { TOptionalLazy } from './lazy';
+import { isLazy } from './lazy';
+import type { TRunnable } from './runnables';
+import { isRunnable } from './runnables';
+import type { Class, InjectableIdentifier } from './typing';
 
 const initMetaMap = new WeakMap();
 
@@ -48,10 +51,10 @@ export default class DependencyInjector {
   getInstances<T>(moduleFactory: TOptionalLazy<TInstantiable<T>>): Promise<T>;
   getInstances<T>(moduleArray: Array<TOptionalLazy<TInstantiable<T>>>): Promise<T[]>;
   getInstances<T>(moduleMap: {
-    [key: string]: TOptionalLazy<TInstantiable<T>>
+    [key: string]: TOptionalLazy<TInstantiable<T>>,
   }): Promise<{ [key: string]: T }>;
 
-  getInstances<T>(
+  async getInstances<T>(
     // dependencies: MyService
     // dependencies: lazy(() => MyService)
     moduleFactory: TOptionalLazy<TInstantiable<T>>
@@ -87,7 +90,7 @@ export default class DependencyInjector {
 
     if (Array.isArray(moduleFactory)) {
       return Promise.all(
-        moduleFactory.map(ClassItem => this._getInstance(ClassItem, dependencyChain)),
+        moduleFactory.map(async ClassItem => this._getInstance(ClassItem, dependencyChain)),
       );
     }
 
@@ -109,7 +112,7 @@ export default class DependencyInjector {
 
   private async _getInstance<T>(buildableModule: TOptionalLazy<TInstantiable<T>>, dependencyChain: any[]): Promise<T> {
     if (buildableModule == null) {
-      // @ts-ignore - Class must be either null or undefined, symbol won't be an issue
+      // @ts-expect-error - Class must be either null or undefined, symbol won't be an issue
       throw new Error(`Trying to get instance of invalid module: ${buildableModule}`);
     }
 
@@ -244,7 +247,7 @@ export function AsyncModuleInit(
   aClass: Object,
   methodName: string | symbol,
   _descriptor: TypedPropertyDescriptor<any>,
-): TypedPropertyDescriptor<any> | void {
+): void {
 
   if (typeof aClass !== 'function') {
     throw new Error('@AsyncModuleInit can only be used on static class methods.');

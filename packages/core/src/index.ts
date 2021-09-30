@@ -3,11 +3,12 @@ import {
 } from '@stilt/util';
 import Emittery from 'emittery';
 import createAnnotation, { getPropertyAnnotation } from './annotations';
-import DependencyInjector, { TInstantiable } from './dependency-injector';
-import { Factory } from './factory';
-import { TOptionalLazy } from './lazy';
-import { TRunnable } from './runnables';
-import { Class, InjectableIdentifier } from './typing';
+import type { TInstantiable } from './dependency-injector';
+import DependencyInjector from './dependency-injector';
+import type { Factory } from './factory';
+import type { TOptionalLazy } from './lazy';
+import type { TRunnable } from './runnables';
+import type { Class, InjectableIdentifier } from './typing';
 
 export {
   AsyncModuleInit,
@@ -43,7 +44,7 @@ export class App {
 
   public readonly lifecycle = new Emittery();
 
-  private _dependencyInjector = new DependencyInjector(newDependency => {
+  private readonly _dependencyInjector = new DependencyInjector(newDependency => {
     this._onDependencyInstanciation(newDependency);
   });
 
@@ -98,8 +99,7 @@ export class App {
     return this._dependencyInjector.executeRunnable(runnable);
   }
 
-  use<T>(module: InjectableIdentifier | Factory<T>): Promise<T> {
-    // @ts-ignore
+  async use<T>(module: InjectableIdentifier | Factory<T>): Promise<T> {
     return this.instantiate(module);
   }
 
@@ -114,10 +114,10 @@ export class App {
   instantiate<T>(runnable: TOptionalLazy<TInstantiable<T>>): Promise<T>;
   instantiate<T>(moduleArray: Array<TOptionalLazy<TInstantiable<T>>>): Promise<T[]>;
   instantiate<T>(moduleMap: { [key: string]: TOptionalLazy<TInstantiable<T>> }): Promise<{ [key: string]: T }>;
-  instantiate<T>(moduleFactory: TOptionalLazy<TInstantiable<T>>
+  async instantiate<T>(moduleFactory: TOptionalLazy<TInstantiable<T>>
     | Array<TOptionalLazy<TInstantiable<T>>>
     | { [key: string]: TOptionalLazy<TInstantiable<T>> }): Promise<T | T[] | { [key: string]: T }> {
-    // @ts-ignore
+    // @ts-expect-error
     return this._dependencyInjector.getInstances(moduleFactory);
   }
 

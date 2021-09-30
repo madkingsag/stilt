@@ -9,7 +9,7 @@ type ResolverOptions = {
   schemaKey: string,
   queryAsParameters?: number,
   parentKey?: string,
-  postResolvers?: Array<Function>,
+  postResolvers?: Function[],
 };
 
 function getSetMeta(Class: Function, methodName: string): ResolverOptions {
@@ -67,7 +67,7 @@ export function addPostResolver(
  * @param func The function on which the metadata has been attached
  * @return {RoutingMetadata} The routing metadata
  */
-function getResolverMetadata(func: Function): ResolverClassMetadata | void {
+function getResolverMetadata(func: Function): ResolverClassMetadata | undefined {
   if (func == null || !func[Meta]) {
     return null;
   }
@@ -88,7 +88,7 @@ export function classToResolvers(classOrInstance: Function | Object, stiltApp): 
     return classOrInstance;
   }
 
-  const meta: ResolverClassMetadata | void = getResolverMetadata(classOrInstance);
+  const meta: ResolverClassMetadata | undefined = getResolverMetadata(classOrInstance);
   if (!meta) {
     return {};
   }
@@ -173,8 +173,8 @@ function nthLastItem(arr, num = 0) {
   return arr[arr.length - (num + 1)];
 }
 
-function lowerFirstLetter(string) {
-  return string.charAt(0).toLowerCase() + string.slice(1);
+function lowerFirstLetter(str: string) {
+  return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
 export {

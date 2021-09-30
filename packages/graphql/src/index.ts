@@ -1,26 +1,31 @@
 import fs from 'fs';
 import path from 'path';
-import { App, factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
-import StiltHttp from '@stilt/http';
+import type { InjectableIdentifier, TRunnable } from '@stilt/core';
+import { App, factory, isRunnable, runnable } from '@stilt/core';
+import { StiltHttp } from '@stilt/http';
 import { asyncGlob, coalesce } from '@stilt/util';
-import {
+import type {
   GraphQLNamedType,
+  Source, DocumentNode,
+} from 'graphql';
+import {
   GraphQLObjectType,
   GraphQLSchema,
   isEnumType,
   isNamedType,
   isType,
   GraphQLError,
-  Source, DocumentNode,
 } from 'graphql';
-import {
+import type {
   ExecutableSchemaTransformation,
   IDirectiveResolvers,
-  makeExecutableSchema,
-  mergeTypeDefs,
   SchemaDirectiveVisitor,
   IExecutableSchemaDefinition,
   ITypeDefinitions,
+} from 'graphql-tools';
+import {
+  makeExecutableSchema,
+  mergeTypeDefs,
 } from 'graphql-tools';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
@@ -54,17 +59,17 @@ export type Config = {
   resolversGlob?: string,
 
   typeDefs?: IExecutableSchemaDefinition['typeDefs'],
-  resolvers?: IExecutableSchemaDefinition['resolvers']
+  resolvers?: IExecutableSchemaDefinition['resolvers'],
 
   useGraphiql?: boolean,
   endpoint?: string,
-  onError?: (error: any, errorCode: string) => void,
+  onError?(error: any, errorCode: string): void,
 
   schemaDirectives?: {
-    [name: string]: typeof SchemaDirectiveVisitor;
-  };
-  directiveResolvers?: IDirectiveResolvers;
-  schemaTransforms?: ExecutableSchemaTransformation[];
+    [name: string]: typeof SchemaDirectiveVisitor,
+  },
+  directiveResolvers?: IDirectiveResolvers,
+  schemaTransforms?: ExecutableSchemaTransformation[],
 };
 
 type IdentifierConfig = {
@@ -82,12 +87,12 @@ type IdentifierConfig = {
 
 const theSecret = Symbol('secret');
 
-export default class StiltGraphQl {
+export class StiltGraphQl {
 
   static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers: Array<InjectableIdentifier> = [
+    const identifiers: InjectableIdentifier[] = [
       identifierConfig?.identifier ?? 'stilt-graphql',
     ];
 
@@ -99,7 +104,7 @@ export default class StiltGraphQl {
       ids: identifiers,
       // Extra modules being registered by this factory. They must be declared before the end of the constructor.
       // The value can be a promise if the initialisation is async
-      build: runnable((app, stiltHttp, resolvedConfig) => {
+      build: runnable(async (app, stiltHttp, resolvedConfig) => {
         return StiltGraphQl.asyncModuleInit(app, stiltHttp, resolvedConfig, theSecret);
       }, [App, StiltHttp, getConfig]),
     });
@@ -232,7 +237,6 @@ export default class StiltGraphQl {
 
     // TODO: check we can remove mergeResolvers
 
-    // @ts-ignore
     return resolverInstances;
   }
 
@@ -319,7 +323,7 @@ async function readOrRequireFile(filePath) {
   const ext = path.parse(filePath).ext;
 
   if (ext === '.ts' || ext === '.js') {
-    return require(filePath);
+    return import(filePath);
   }
 
   return { default: await fs.promises.readFile(filePath, 'utf8') };

@@ -1,5 +1,3 @@
-// @flow
-
 const ruleOverrides = {
   // changed for this project
   'no-undefined': 'off',
@@ -21,30 +19,17 @@ module.exports = {
   settings: {
     'import/parsers': {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
+      '@babel/eslint-parser': ['.js', '.jsx', '.mjs'],
     },
   },
   overrides: [{
-    files: ['*.js', '*.jsx', '*.mjs'],
-    settings: {
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx'],
-        'babel-eslint': ['.js', '.jsx', '.mjs'],
-      },
-    },
-  }, {
     files: ['*.ts', '*.tsx'],
     extends: '@foobarhq/eslint-config-typescript',
     rules: {
       ...ruleOverrides,
       'no-undef': 'off',
     },
-    settings: {
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx'],
-        'babel-eslint': ['.js', '.jsx', '.mjs'],
-      },
-    },
   }],
 
-  ignorePatterns: ['*.d.ts'],
+  ignorePatterns: ['*.d.ts', 'dist'],
 };

@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'async_hooks';
-import { App, factory, Factory, InjectableIdentifier, isRunnable, runnable, TRunnable } from '@stilt/core';
+import type { Factory, InjectableIdentifier, TRunnable } from '@stilt/core';
+import { App, factory, isRunnable, runnable } from '@stilt/core';
 import chalk from 'chalk';
 import ip from 'ip';
 import Koa from 'koa';
@@ -9,7 +10,7 @@ import { ContextProvider, IContextProvider } from './ContextProvider';
 
 type Config = {
   port: number,
-}
+};
 
 type IdentifierConfig = {
   identifier?: string,
@@ -25,7 +26,7 @@ class StiltHttp {
   static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltHttp> {
     const getConfig = isRunnable(config) ? config : runnable(() => config);
 
-    const identifiers: Array<InjectableIdentifier> = [
+    const identifiers: InjectableIdentifier[] = [
       identifierConfig?.identifier ?? 'stilt-http',
     ];
 
@@ -41,11 +42,11 @@ class StiltHttp {
     });
   }
 
-  private _declaredEndpoints = [];
-  private port;
+  private readonly _declaredEndpoints: Array<{ name: string, path: string }> = [];
+  private readonly port;
   public koa;
-  private router;
-  private logger;
+  private readonly router;
+  private readonly logger;
   private httpServer;
 
   constructor(app: App, config: Config, secret: Symbol) {
@@ -72,8 +73,8 @@ class StiltHttp {
 
     app.registerInstance(IContextProvider, new ContextProvider(this));
 
-    app.lifecycle.on('start', () => this.start());
-    app.lifecycle.on('close', () => this.close());
+    app.lifecycle.on('start', async () => this.start());
+    app.lifecycle.on('close', async () => this.close());
   }
 
   async start() {
@@ -93,7 +94,7 @@ class StiltHttp {
     this._printServerStarted(this.port);
   }
 
-  close() {
+  async close() {
     return new Promise((resolve, reject) => {
       if (!this.httpServer) {
         resolve(false);
@@ -220,7 +221,7 @@ function printTable(lines) {
 function asyncToKoa(asyncFunction) {
 
   return function asyncRoute(ctx) {
-    // eslint-disable-next-line babel/no-invalid-this
+    // eslint-disable-next-line @typescript-eslint/no-invalid-this
     const result = asyncFunction.call(this, ctx);
 
     if (result && result.then) {

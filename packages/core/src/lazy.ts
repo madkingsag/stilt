@@ -1,7 +1,7 @@
 export const IsLazy = Symbol('is-lazy');
 
 export type TLazy<T> = {
-  (): T;
+  (): T,
   [IsLazy]: true,
 };
 
@@ -10,7 +10,7 @@ export type TOptionalLazy<T> = TLazy<T> | T;
 export function lazy<T>(callback: () => T): TLazy<T> {
   callback[IsLazy] = true;
 
-  // @ts-ignore
+  // @ts-expect-error
   return callback;
 }
 
