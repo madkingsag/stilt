@@ -1,6 +1,6 @@
 {
   "name": "@stilt/core",
-  "version": "0.21.0-alpha.13",
+  "version": "0.21.0-alpha.14",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "type": "module",
