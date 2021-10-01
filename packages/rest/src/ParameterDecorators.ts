@@ -7,8 +7,7 @@ import RestError from './RestError.js';
 let Joi;
 
 try {
-  // TODO: either force dep or move to top-level await + import()
-  Joi = await import('joi');
+  Joi = (await import('joi')).default;
 } catch (ignore) { /* ignore */ }
 
 function runValidation(paramValue, paramValidator, parameterSource, context, validationOpts, errorStatus) {
