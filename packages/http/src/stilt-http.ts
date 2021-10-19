@@ -146,6 +146,10 @@ class StiltHttp {
    * @private
    */
   _printServerStarted(port) {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
     chalk.enabled = true;
 
     const localhost = `http://localhost:${port}`;

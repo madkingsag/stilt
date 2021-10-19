@@ -192,7 +192,9 @@ export class StiltSequelize {
 
     this.syncCompleteDeferred.resolve();
 
-    this.logger.debug('Database Connection Ready');
+    if (process.env.NODE_ENV !== 'test') {
+      this.logger.debug('Database Connection Ready');
+    }
   }
 
   async close() {
