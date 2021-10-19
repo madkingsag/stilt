@@ -11,7 +11,7 @@ type InjectorFactoryOptions<Params extends any[], Dependencies extends TInjector
     /* runtime parameters */
     parameters: Params,
     /* dependencies declared in dependencies property */
-    dependencies?: Dependencies
+    dependencies: Dependencies
   ): { [key: string]: any },
 };
 
