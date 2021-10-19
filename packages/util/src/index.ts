@@ -10,7 +10,7 @@ export function hasOwnProperty<X extends {}, Y extends PropertyKey>(
   return Object.prototype.hasOwnProperty.call(obj, propertyKey);
 }
 
-export function isPlainObject(obj: any): obj is Object {
+export function isPlainObject(obj: any): obj is object {
   const proto = Object.getPrototypeOf(obj);
 
   return proto == null || proto === Object.prototype;
@@ -56,9 +56,16 @@ export function coalesce<T>(...args: T[]): T {
 }
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+type MaybePromise<T> = Promise<T> | T;
 
-export async function awaitAllEntries<T extends { [key: string]: any },
-  >(obj: T): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> }> {
+// eslint-disable-next-line max-len
+export async function awaitAllEntries<In, T extends { [key: string]: MaybePromise<In> }>(obj: T): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> }>;
+export async function awaitAllEntries<In>(obj: Array<MaybePromise<In>>): Promise<In[]>;
+// eslint-disable-next-line max-len
+export async function awaitAllEntries<In, T extends ({ [key: string]: MaybePromise<In> })>(obj: T | Array<MaybePromise<In>>): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> } | In[]> {
+  if (Array.isArray(obj)) {
+    return Promise.all(obj);
+  }
 
   const values = await Promise.all(Object.values(obj));
   const keys = Object.keys(obj);
@@ -73,7 +80,7 @@ export async function awaitAllEntries<T extends { [key: string]: any },
   return resolvedObject;
 }
 
-export function mapObject<In, Out, T extends { [key: string]: In }>(
+export function mapObject<In, Out, T>(
   obj: T,
   callback: (value: In, key: string) => Out,
 ): { [P in keyof T]: Out } {
@@ -88,6 +95,71 @@ export function mapObject<In, Out, T extends { [key: string]: In }>(
   return newObject;
 }
 
+export function mapEntries<In, Out, T extends { [key: string]: In }>(
+  obj: T,
+  callback: (value: In, key: string | number) => Out
+): { [P in keyof T]: Out };
+
+export function mapEntries<In, Out>(
+  obj: In[],
+  callback: (value: In, key: string | number) => Out
+): Out[];
+
+export function mapEntries<In, Out, T extends ({ [key: string]: In })>(
+  obj: T | In[],
+  callback: (value: In, key: string | number) => Out): { [P in keyof T]: Out } | Out[] {
+  // process.env.JEST_WORKER_ID
+  if (Array.isArray(obj)) {
+    return obj.map((value, key) => callback(value, key));
+  }
+
+  return mapObject(obj, callback);
+}
+
+// eslint-disable-next-line max-len
+export async function awaitMapAllEntries<In, Out, T extends { [key: string]: In }>(obj: T, callback: (value: In, key: string | number) => MaybePromise<Out>, sequential?: boolean): Promise<{ [P in keyof T]: Out }>;
+// eslint-disable-next-line max-len
+export async function awaitMapAllEntries<In, Out>(obj: In[], callback: (value: In, key: string | number) => MaybePromise<Out>, sequential?: boolean): Promise<Out[]>;
+// eslint-disable-next-line max-len
+export async function awaitMapAllEntries<In, Out, T extends ({ [key: string]: In })>(
+  obj: T | In[],
+  callback: (value: In, key: string | number) => MaybePromise<Out>,
+  sequential?: boolean): Promise<{ [P in keyof T]: Out } | Out[]> {
+
+  // `sequential` option is a workaround due to a bug when using Jest with native ES Modules
+  // See https://github.com/facebook/jest/issues/11434
+  if (sequential) {
+    if (Array.isArray(obj)) {
+      const out = [];
+
+      for (let i = 0; i < obj.length; i++){
+        // eslint-disable-next-line no-await-in-loop
+        out.push(await callback(obj[i], i));
+      }
+
+      return out;
+    }
+
+    const out = {};
+    for (const key of Object.keys(obj)) {
+      // eslint-disable-next-line no-await-in-loop
+      out[key] = await callback(obj[key], key);
+    }
+
+    // @ts-expect-error
+    return out;
+  }
+
+  // @ts-expect-error
+  const mapped = mapEntries(obj, callback);
+  const out = awaitAllEntries(mapped);
+
+  // @ts-expect-error
+  return out;
+}
+
 export function assertIsFunction(item: any): asserts item is Function {
   assert(typeof item === 'function');
 }
+
+export const FORCE_SEQUENTIAL_MODULE_IMPORT = process.env.JEST_WORKER_ID != null;

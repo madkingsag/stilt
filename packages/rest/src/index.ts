@@ -3,7 +3,7 @@ import { App, factory, isRunnable, runnable } from '@stilt/core';
 import type { Class } from '@stilt/core/types/typing';
 import { StiltHttp } from '@stilt/http';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
-import { asyncGlob } from '@stilt/util';
+import { asyncGlob, awaitMapAllEntries, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
 import { getRoutingMetadata } from './HttpMethodsDecorators.js';
 import { IsRestError } from './RestError.js';
 
@@ -145,28 +145,24 @@ export class StiltRest {
   private static async loadControllers(app: App, schemaGlob: string) {
     const controllers = await asyncGlob(schemaGlob);
 
-    const apiClasses = (await Promise.all(
-      Object.values(controllers).map(async controllerPath => {
-        const controllerModule = await import(controllerPath);
-        const controllerClass = controllerModule.default;
+    const apiClasses = (await awaitMapAllEntries(Object.values(controllers), async controllerPath => {
+      const controllerModule = await import(controllerPath);
+      const controllerClass = controllerModule.default;
 
-        if (controllerClass == null || (typeof controllerClass !== 'function' && typeof controllerClass !== 'object')) {
-          return null;
-        }
-
-        return controllerClass;
-      }),
-    )).filter(controllerClass => controllerClass != null);
-
-    const apiInstances = await Promise.all(
-      apiClasses.map(async resolverClass => {
-        if (typeof resolverClass === 'function') {
-          return app.instantiate(resolverClass);
-        }
-
+      if (controllerClass == null || (typeof controllerClass !== 'function' && typeof controllerClass !== 'object')) {
         return null;
-      }),
-    );
+      }
+
+      return controllerClass;
+    }, FORCE_SEQUENTIAL_MODULE_IMPORT)).filter(controllerClass => controllerClass != null);
+
+    const apiInstances = (await awaitMapAllEntries(apiClasses, async resolverClass => {
+      if (typeof resolverClass === 'function') {
+        return app.instantiate(resolverClass);
+      }
+
+      return null;
+    }, FORCE_SEQUENTIAL_MODULE_IMPORT)).filter(controllerInstance => controllerInstance != null);
 
     const routeHandlers = [...apiClasses, ...apiInstances];
 

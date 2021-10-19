@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { awaitAllEntries, isPlainObject, mapObject } from '@stilt/util';
+import { awaitMapAllEntries, isPlainObject, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
 import type { Factory } from './factory';
 import { isFactory } from './factory.js';
 import type { TOptionalLazy } from './lazy';
@@ -65,6 +65,7 @@ export default class DependencyInjector {
       // dependencies: { myService: lazy(() => MyService) }
       | { [key: string]: TOptionalLazy<TInstantiable<T>> },
   ): Promise<T | T[] | { [key: string]: T }> {
+    // @ts-expect-error
     return this._getInstances(moduleFactory, []);
   }
 
@@ -88,21 +89,17 @@ export default class DependencyInjector {
       return this._getInstance<T>(moduleFactory, dependencyChain);
     }
 
-    if (Array.isArray(moduleFactory)) {
-      return Promise.all(
-        moduleFactory.map(async ClassItem => this._getInstance(ClassItem, dependencyChain)),
-      );
-    }
-
-    if (typeof moduleFactory === 'object' && isPlainObject(moduleFactory)) {
-      return awaitAllEntries(mapObject(moduleFactory, async (aClass: TOptionalLazy<TInstantiable<T>>, key: string) => {
+    if (Array.isArray(moduleFactory) || typeof moduleFactory === 'object' && isPlainObject(moduleFactory)) {
+      // @ts-expect-error
+      return awaitMapAllEntries(moduleFactory, async (ClassItem, key) => {
         try {
-          return await this._getInstance<T>(aClass, dependencyChain);
+          // @ts-expect-error
+          return await this._getInstance<T>(ClassItem, dependencyChain);
         } catch (e) {
-          // TODO: use .causedBy
+          // TODO: use { cause: e }
           throw new Error(`Failed to build ${key}: \n ${e.message}`);
         }
-      }));
+      }, FORCE_SEQUENTIAL_MODULE_IMPORT);
     }
 
     assert(typeof moduleFactory === 'function');

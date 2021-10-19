@@ -3,7 +3,7 @@ import path from 'path';
 import type { InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
 import { StiltHttp } from '@stilt/http';
-import { asyncGlob, coalesce } from '@stilt/util';
+import { asyncGlob, awaitMapAllEntries, coalesce, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
 import type {
   GraphQLNamedType,
   Source, DocumentNode,
@@ -207,7 +207,7 @@ export class StiltGraphQl {
      * - A GraphQL type (eg. a GraphQL enum, any export)
      */
 
-    const resolverExports = await Promise.all(resolverFiles.map(readOrRequireFile));
+    const resolverExports = await awaitMapAllEntries(resolverFiles, readOrRequireFile, FORCE_SEQUENTIAL_MODULE_IMPORT);
 
     const resolverInstancePromises = [];
     for (const resolverExport of resolverExports) {
