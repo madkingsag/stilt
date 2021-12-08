@@ -112,8 +112,8 @@ export class StiltGraphQl {
 
   private static async asyncModuleInit(app: App, stiltHttp: StiltHttp, config: Config, secret: symbol) {
 
-    const schemaGlob = config.typeDefsGlob || '**/*.+(schema.{js,ts}|graphqls)';
-    const resolverGlob = config.resolversGlob || '**/*.resolver.{js,ts}';
+    const schemaGlob = config.typeDefsGlob || '**/*.+(schema.{js,mjs,cjs,ts,mts,cts}|graphqls)';
+    const resolverGlob = config.resolversGlob || '**/*.resolver.{js,mjs,cjs,ts,mts,cts}';
 
     const [types, resolvers] = await Promise.all([
       this._loadTypes(schemaGlob, config.typeDefs),

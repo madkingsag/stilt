@@ -169,7 +169,7 @@ export class StiltSequelize {
       app.registerInstance(Sequelize, this.sequelize);
     }
 
-    const modelDirectory = this.config.models || '**/*.entity.{js,ts}';
+    const modelDirectory = this.config.models || '**/*.entity.{js,mjs,cjs,ts,mts,cts}';
     this.modelLoadingPromise = loadModels(modelDirectory, this.sequelize);
   }
 

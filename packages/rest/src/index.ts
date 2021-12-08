@@ -54,7 +54,7 @@ export class StiltRest {
       // Extra modules being registered by this factory. They must be declared before the end of the constructor.
       // The value can be a promise if the initialisation is async
       build: runnable(async (app: App, stiltHttp: StiltHttp, resolvedConfig: Config) => {
-        const schemaGlob = resolvedConfig.controllers || '**/*.rest.{js,ts}';
+        const schemaGlob = resolvedConfig.controllers || '**/*.rest.{js,mjs,cjs,ts,mts,cts}';
 
         const controllers = await this.loadControllers(app, schemaGlob);
 
