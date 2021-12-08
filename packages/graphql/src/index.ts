@@ -168,6 +168,10 @@ export class StiltGraphQl {
           name: 'Mutation',
           fields: {},
         }),
+        new GraphQLObjectType({
+          name: 'Subscription',
+          fields: {},
+        }),
         ...foundNamedTypes,
       ],
     });
