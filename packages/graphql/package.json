@@ -1,6 +1,6 @@
 {
   "name": "@stilt/graphql",
-  "version": "0.21.0-alpha.16",
+  "version": "0.21.0-alpha.17",
   "description": "GraphQL Module for Stilt Framework",
   "main": "dist/index.js",
   "type": "module",
