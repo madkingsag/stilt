@@ -94,6 +94,10 @@ export class StiltRest {
       return entity;
     }
 
+    if (entity.then) {
+      return this.entityToJson(await entity);
+    }
+
     const serializer = this.getSerializer(entity);
     if (serializer) {
       entity = await serializer.serialize(entity);
