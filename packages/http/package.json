@@ -14,7 +14,8 @@
   "license": "MIT",
   "types": "types",
   "devDependencies": {
-    "@stilt/core": "^0.21.0-alpha.16"
+    "@stilt/core": "^0.21.0-alpha.16",
+    "@types/koa": "^2.13.4"
   },
   "dependencies": {
     "@stilt/util": "^0.21.0-alpha.16",

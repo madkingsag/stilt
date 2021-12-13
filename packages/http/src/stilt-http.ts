@@ -17,7 +17,9 @@ type IdentifierConfig = {
   defaultModule?: boolean,
 };
 
-const contextAsyncStorage = new AsyncLocalStorage();
+export type THttpContext = Koa.ParameterizedContext<Koa.DefaultState, Koa.DefaultContext, any>;
+
+const contextAsyncStorage = new AsyncLocalStorage<THttpContext>();
 const theSecret = Symbol('secret');
 
 // TODO: @disableBodyParser decorator
@@ -44,7 +46,7 @@ class StiltHttp {
 
   private readonly _declaredEndpoints: Array<{ name: string, path: string }> = [];
   private readonly port;
-  public koa;
+  public koa: Koa;
   private readonly router;
   private readonly logger;
   private httpServer;
@@ -81,20 +83,16 @@ class StiltHttp {
     this.koa.use(this.router.middleware());
 
     // TODO only listen plugin if a route is registered
-    await new Promise((resolve, reject) => {
-      this.httpServer = this.koa.listen(this.port, (err, val) => {
-        if (err) {
-          return void reject(err);
-        }
-
-        resolve(val);
+    await new Promise<void>(resolve => {
+      this.httpServer = this.koa.listen(this.port, () => {
+        resolve();
       });
     });
 
     this._printServerStarted(this.port);
   }
 
-  async close() {
+  async close(): Promise<boolean> {
     return new Promise((resolve, reject) => {
       if (!this.httpServer) {
         resolve(false);
@@ -115,7 +113,7 @@ class StiltHttp {
   /**
    * @returns the context of the request that is currently being processed. Null if no request is being processed.
    */
-  getCurrentContext() {
+  getCurrentContext(): THttpContext {
     return contextAsyncStorage.getStore();
   }
 
@@ -126,7 +124,7 @@ class StiltHttp {
    * @param path The path part of the URL on which the route is.
    * @param callback The method handling the route.
    */
-  registerRoute(method, path, callback) {
+  registerRoute(method: string, path: string, callback) {
     // TODO: add "accept" option (array)
     // TODO: throw if a route has already been defined for a given method+path+accept
     const asyncCallback = asyncToKoa(callback);

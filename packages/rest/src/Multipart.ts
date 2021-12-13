@@ -46,7 +46,6 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
       // @ts-expect-error
       await middleware(context, val => val);
 
-      // @ts-expect-error
       return { [fileConfigs]: context.files };
     }
 
@@ -72,7 +71,6 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
     try {
       // @ts-expect-error
       await middleware(context, val => val);
-      // @ts-expect-error
       files = context.files;
     } catch (e) {
       if (e.code === 'LIMIT_UNEXPECTED_FILE') {
