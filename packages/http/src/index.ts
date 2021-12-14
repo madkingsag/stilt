@@ -1,7 +1,8 @@
 export { makeControllerInjector } from './controllerInjectors.js';
-export type { TControllerInjector } from './controllerInjectors';
+export type { TControllerInjector } from './controllerInjectors.js';
 
 export { WithContext, WithContext as withContext } from './with-context.js';
 export { IContextProvider, ContextProvider } from './ContextProvider.js';
 
-export { StiltHttp, THttpContext } from './stilt-http.js';
+export { StiltHttp } from './stilt-http.js';
+export type { THttpContext } from './stilt-http.js';
