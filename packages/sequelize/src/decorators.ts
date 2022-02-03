@@ -1,7 +1,7 @@
 import isCallable from 'is-callable';
 import type {
   ModelAttributes,
-  ModelCtor,
+  ModelStatic,
   ModelOptions,
   BelongsToOptions as SequelizeBelongsToOptions,
   HasOneOptions as SequelizeHasOneOptions,
@@ -25,15 +25,15 @@ type GetSymmetricalAssociationFunc = (AssociationOptions) => null | ({
 });
 
 type AssociationTag = {
-  sourceModel: ModelCtor<any>,
-  targetModel: ModelCtor<any> | (() => ModelCtor<any>),
+  sourceModel: ModelStatic<any>,
+  targetModel: ModelStatic<any> | (() => ModelStatic<any>),
   associationType: AssociationType,
   getSymmetricalAssociation: GetSymmetricalAssociationFunc,
   associationOptions: AssociationOptions,
 };
 
 type SequelizeAssociationMeta = {
-  model: ModelCtor<any>,
+  model: ModelStatic<any>,
   type: string,
   parameters: any[],
 };
@@ -49,7 +49,7 @@ function flat<T>(arr: T[][]): T[] {
   return result;
 }
 
-function getAssociationMeta(models: Array<ModelCtor<any>>): SequelizeAssociationMeta[] {
+function getAssociationMeta(models: Array<ModelStatic<any>>): SequelizeAssociationMeta[] {
   const associations: SequelizeAssociationMeta[] = [];
   const associationTags: AssociationTag[] = flat(models
     .map(model => model[METADATA])
@@ -64,7 +64,7 @@ function getAssociationMeta(models: Array<ModelCtor<any>>): SequelizeAssociation
     * @BelongsTo(() => User)
     * class User extends Model{}
     */
-    const targetModel: ModelCtor<any> = isPureFunction(associationTag.targetModel)
+    const targetModel: ModelStatic<any> = isPureFunction(associationTag.targetModel)
       ? associationTag.targetModel()
       : associationTag.targetModel;
 
@@ -117,7 +117,7 @@ function makeAssociationDecorator<AnyAssociationOpts extends AssociationOptions>
   associationType,
   { getSymmetricalAssociation },
 ) {
-  return function createAssociation(targetModel, associationOptions: AnyAssociationOpts) {
+  return function createAssociation(targetModel, associationOptions?: AnyAssociationOpts) {
     return function decorate(sourceModel) {
 
       if (!associationOptions) {
@@ -144,7 +144,7 @@ type BelongsToAssociationOptions = SequelizeBelongsToOptions & {
   // Added by Stilt
   inverse?: {
     type: 'many' | 'one',
-    as: SequelizeAs,
+    as?: SequelizeAs,
     scope?: boolean, // ONLY IF "many"
     sourceKey?: string, // ONLY IF "many"
   },
@@ -249,7 +249,7 @@ type HasOneAssociationOptions = SequelizeHasOneOptions & {
   // Added by Stilt
   inverse?: {
     as: SequelizeAs,
-  },
+  } | SequelizeAs,
 };
 
 /*
@@ -330,7 +330,7 @@ type HasManyAssociationOptions = SequelizeHasManyOptions & {
   // Added by Stilt
   inverse?: {
     as: SequelizeAs,
-  },
+  } | SequelizeAs,
 };
 
 /*
@@ -380,7 +380,7 @@ const HasMany = makeAssociationDecorator<HasManyAssociationOptions>('hasMany', {
 
 type BelongsToManyAssociationOptions = Omit<SequelizeBelongsToManyOptions, 'through'> & {
   // add support for lazy-loading of models
-  through: string | ModelCtor<any> | ThroughOptions | (() => ModelCtor<any> | ThroughOptions),
+  through: string | ModelStatic<any> | ThroughOptions | (() => ModelStatic<any> | ThroughOptions),
 
   // Added by stilt
   inverse?: {
@@ -469,7 +469,7 @@ const SequelizeOptions = Symbol('sequelize-options');
 const SequelizeAttributes = Symbol('sequelize-attributes');
 
 function Options(options: ModelOptions) {
-  return function decorate(model: ModelCtor<any>) {
+  return function decorate(model: ModelStatic<any>) {
     Object.defineProperty(model, SequelizeOptions, {
       value: options,
       enumerable: false,
@@ -480,7 +480,7 @@ function Options(options: ModelOptions) {
 }
 
 function Attributes(attributes: ModelAttributes) {
-  return function decorate(model: ModelCtor<any>) {
+  return function decorate(model: ModelStatic<any>) {
     Object.defineProperty(model, SequelizeAttributes, {
       value: attributes,
       enumerable: false,
@@ -490,7 +490,7 @@ function Attributes(attributes: ModelAttributes) {
   };
 }
 
-export function getModelInitData(model: ModelCtor<any>): { options: Object, attributes: Object } {
+export function getModelInitData(model: ModelStatic<any>): { options: Object, attributes: Object } {
   return {
     options: model[SequelizeOptions] || {},
     attributes: model[SequelizeAttributes] || {},
