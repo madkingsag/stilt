@@ -1,60 +1,77 @@
+import type { App } from '@stilt/core';
 import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
-import { isPlainObject } from '@stilt/util';
+import { isPlainObject, getMethodName } from '@stilt/util';
 import setProperty from 'lodash/set.js';
 
-const Meta = Symbol('graphql-meta');
+type ClassGqlMeta = Map</* methodName */ string | symbol, GqlMeta>;
 
-type ResolverClassMetadata = Map<string, ResolverOptions>;
-type ResolverOptions = {
-  schemaKey: string,
+const resolverMetaPerClass = new WeakMap<Object, ClassGqlMeta>();
+
+type ResolverOptions = { schemaPath: string, parentKey?: string };
+
+type GqlMeta = {
+  resolverOptions: ResolverOptions[],
+  // subscriptionSchemaPath: string[],
   queryAsParameters?: number,
-  parentKey?: string,
-  postResolvers?: Function[],
+  postResolvers: Function[],
 };
 
-function getSetMeta(Class: Function, methodName: string): ResolverOptions {
-  if (!Class[Meta]) {
-    Class[Meta] = new Map();
+function getGqlMetaForClass(classOrInstance: Object, methodName: string | symbol): GqlMeta {
+  if (!resolverMetaPerClass.has(classOrInstance)) {
+    resolverMetaPerClass.set(classOrInstance, new Map());
   }
 
-  if (!Class[Meta].has(methodName)) {
-    Class[Meta].set(methodName, {});
+  const classResolverMeta = resolverMetaPerClass.get(classOrInstance)!;
+  if (!classResolverMeta.has(methodName)) {
+    classResolverMeta.set(methodName, {
+      resolverOptions: [],
+      // subscriptionSchemaPath: [],
+      postResolvers: [],
+    });
   }
 
-  return Class[Meta].get(methodName, {});
+  return classResolverMeta.get(methodName);
 }
 
-function resolve(schemaPath: string, opts?: { parentKey?: string }): Function {
-  return function decorate(Class, methodName) {
-    const resolverOptions = getSetMeta(Class, methodName);
+export function Resolve(schemaPath: string, opts?: { parentKey?: string }): MethodDecorator {
+  return function decorate(classOrInstance, methodName) {
+    const resolverOptions = getGqlMetaForClass(classOrInstance, methodName);
 
-    resolverOptions.schemaKey = schemaPath;
-
-    if (opts && opts.parentKey) {
-      resolverOptions.parentKey = opts.parentKey;
-    }
+    resolverOptions.resolverOptions.push({
+      schemaPath,
+      parentKey: opts?.parentKey,
+    });
   };
 }
 
-function withGraphqlQuery(paramNum: number): Function {
+// export function Subscribe(schemaPath: string): MethodDecorator {
+//   return function decorate(classOrInstance, methodName) {
+//     const resolverOptions = getGqlMetaForClass(classOrInstance, methodName);
+//
+//     resolverOptions.subscriptionSchemaPath.push(schemaPath);
+//   };
+// }
 
-  return function decorate(Class, methodName) {
-    const resolverOptions = getSetMeta(Class, methodName);
+export function WithGraphqlQuery(paramNum: number): MethodDecorator {
 
-    resolverOptions.queryAsParameters = paramNum;
+  return function decorate(classOrInstance, methodName) {
+    const gqlOptions = getGqlMetaForClass(classOrInstance, methodName);
+
+    if ('queryAsParameters' in gqlOptions) {
+      throw new Error(`@WithGraphqlQuery has already been used on resolver ${getMethodName(classOrInstance, methodName)}`);
+    }
+
+    gqlOptions.queryAsParameters = paramNum;
   };
 }
 
 // TODO don't expose addPostResolver yet, need research on how to add hooks to this API.
 export function addPostResolver(
-  Class: Function,
-  methodName: string,
+  classOrInstance: Object,
+  methodName: string | symbol,
   callback: (err: Error | null, data: any | null) => any,
 ) {
-
-  const resolverOptions = getSetMeta(Class, methodName);
-
-  resolverOptions.postResolvers = resolverOptions.postResolvers || [];
+  const resolverOptions = getGqlMetaForClass(classOrInstance, methodName);
 
   resolverOptions.postResolvers.push(callback);
 }
@@ -64,20 +81,22 @@ export function addPostResolver(
  *
  * Designed for internal use.
  *
- * @param func The function on which the metadata has been attached
- * @return {RoutingMetadata} The routing metadata
+ * @param classOrInstance The function on which the metadata has been attached
+ * @return The routing metadata
  */
-function getResolverMetadata(func: Function): ResolverClassMetadata | undefined {
-  if (func == null || !func[Meta]) {
+function getResolverMetadata(classOrInstance: Object): ClassGqlMeta | null {
+  if (classOrInstance == null) {
     return null;
   }
 
-  const meta = func[Meta];
-
-  return meta;
+  return resolverMetaPerClass.get(classOrInstance) ?? null;
 }
 
-export function classToResolvers(classOrInstance: Function | Object, stiltApp): Object {
+// export function classToSubscriptionHandler(classOrInstance: Object, stiltApp: App): Object {
+//
+// }
+
+export function classToResolvers(classOrInstance: Object, stiltApp: App): Object {
   // non objects should map to nothing
   if (classOrInstance === null || (typeof classOrInstance !== 'object' && typeof classOrInstance !== 'function')) {
     return {};
@@ -88,35 +107,43 @@ export function classToResolvers(classOrInstance: Function | Object, stiltApp): 
     return classOrInstance;
   }
 
-  const meta: ResolverClassMetadata | undefined = getResolverMetadata(classOrInstance);
+  const meta: ClassGqlMeta | null = getResolverMetadata(classOrInstance);
   if (!meta) {
     return {};
   }
 
-  const resolvers = {};
+  const resolvers = Object.create(null);
 
-  meta.forEach((options: ResolverOptions, methodName: string) => {
+  meta.forEach((options: GqlMeta, methodName: string) => {
 
-    const method = normalizeFunction(
-      classOrInstance,
-      wrapControllerWithInjectors(
+    for (const resolverOption of options.resolverOptions) {
+      const method = normalizeFunction(
         classOrInstance,
-        methodName,
-        classOrInstance[methodName],
-        stiltApp,
-      ),
-      options,
-    );
+        wrapControllerWithInjectors(
+          classOrInstance,
+          methodName,
+          classOrInstance[methodName],
+          stiltApp,
+        ),
+        options,
+        resolverOption,
+      );
 
-    setProperty(resolvers, options.schemaKey, method);
+      setProperty(resolvers, resolverOption.schemaPath, method);
+    }
   });
 
   return resolvers;
 }
 
-function normalizeFunction(Class: Function, method: Function, options: ResolverOptions): Function {
+function normalizeFunction(
+  classOrInstance: Object,
+  method: Function,
+  options: GqlMeta,
+  resolverOptions: ResolverOptions,
+): Function {
 
-  const parentName = options.parentKey || lowerFirstLetter(nthLastItem(options.schemaKey.split('.'), 1));
+  const parentName = resolverOptions.parentKey || lowerFirstLetter(nthLastItem(resolverOptions.schemaPath.split('.'), 1));
 
   return async function resolver(parent, graphqlQueryParameters, koaContext, graphqlQuery) {
 
@@ -140,7 +167,7 @@ function normalizeFunction(Class: Function, method: Function, options: ResolverO
     let resultError;
 
     try {
-      resultNode = await method.apply(Class, methodParameters);
+      resultNode = await method.apply(classOrInstance, methodParameters);
     } catch (e) {
       resultError = e;
     }
@@ -176,8 +203,3 @@ function nthLastItem(arr, num = 0) {
 function lowerFirstLetter(str: string) {
   return str.charAt(0).toLowerCase() + str.slice(1);
 }
-
-export {
-  resolve,
-  withGraphqlQuery,
-};

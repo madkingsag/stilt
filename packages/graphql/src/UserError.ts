@@ -57,7 +57,7 @@ function handleUserErrors(error, node) {
   throw error;
 }
 
-export function throwsUserErrors(Class: Function, methodName: string, descriptor: Descriptor): Descriptor {
+export function ThrowsUserErrors(Class: Function, methodName: string, descriptor: Descriptor): Descriptor {
 
   addPostResolver(Class, methodName, handleUserErrors);
 

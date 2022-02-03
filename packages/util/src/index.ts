@@ -56,7 +56,7 @@ export function coalesce<T>(...args: T[]): T {
 }
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
-type MaybePromise<T> = Promise<T> | T;
+export type MaybePromise<T> = Promise<T> | T;
 
 // eslint-disable-next-line max-len
 export async function awaitAllEntries<In, T extends { [key: string]: MaybePromise<In> }>(obj: T): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> }>;
@@ -163,3 +163,21 @@ export function assertIsFunction(item: any): asserts item is Function {
 }
 
 export const FORCE_SEQUENTIAL_MODULE_IMPORT = process.env.JEST_WORKER_ID != null;
+
+export function getValueName(value: any): string {
+  if (typeof value !== 'object' || value === null) {
+    return String(value);
+  }
+
+  return value.name || value.constructor.name;
+}
+
+export function getMethodName(classOrInstance: Object, key: symbol | string): string {
+  if (classOrInstance.constructor) {
+    // instance
+    return `${getValueName(classOrInstance)}#${String(key)}`;
+  }
+
+  // static
+  return `${getValueName(classOrInstance)}.${String(key)}`;
+}

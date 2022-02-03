@@ -34,16 +34,12 @@ import { classToResolvers } from './ResolveDecorator.js';
 import { IsDevError } from './graphql-errors.js';
 
 export {
-  resolve,
-  resolve as Resolve,
-
-  withGraphqlQuery,
-  withGraphqlQuery as WithGraphqlQuery,
+  Resolve,
+  WithGraphqlQuery,
 } from './ResolveDecorator.js';
 
 export {
-  throwsUserErrors,
-  throwsUserErrors as ThrowsUserErrors,
+  ThrowsUserErrors,
 
   UserError,
   IsUserError,
