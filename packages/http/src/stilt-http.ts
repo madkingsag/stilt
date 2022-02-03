@@ -1,11 +1,15 @@
 import { AsyncLocalStorage } from 'async_hooks';
+import type { Server } from 'http';
 import type { Factory, InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
+import type { TDeferred } from '@stilt/util';
+import { createDeferred } from '@stilt/util';
 import chalk from 'chalk';
 import ip from 'ip';
 import Koa from 'koa';
 import Router from 'koa-better-router'; // TODO: replace with @koa/router
 import bodyParser from 'koa-bodyparser';
+import { WebSocketServer } from 'ws';
 import { ContextProvider, IContextProvider } from './ContextProvider.js';
 
 type Config = {
@@ -44,12 +48,14 @@ class StiltHttp {
     });
   }
 
-  private readonly _declaredEndpoints: Array<{ name: string, path: string }> = [];
+  readonly #declaredEndpoints: Array<{ name: string, path: string }> = [];
   private readonly port;
-  public koa: Koa;
+  public readonly koa: Koa;
   private readonly router;
   private readonly logger;
-  private httpServer;
+  private httpServer: Server | undefined;
+
+  #startDeferred: TDeferred<void>;
 
   constructor(app: App, config: Config, secret: Symbol) {
     if (secret !== theSecret) {
@@ -67,8 +73,8 @@ class StiltHttp {
 
     this.logger = app.makeLogger('http');
 
-    this.koa.use((ctx, next) => {
-      return contextAsyncStorage.run(ctx, () => {
+    this.koa.use(async (ctx, next) => {
+      return contextAsyncStorage.run(ctx, async () => {
         return next();
       });
     });
@@ -77,6 +83,23 @@ class StiltHttp {
 
     app.lifecycle.on('start', async () => this.start());
     app.lifecycle.on('close', async () => this.close());
+
+    this.#startDeferred = createDeferred();
+  }
+
+  #webSockets: WebSocketServer[] = [];
+  async startWebSocketServer(path: string): Promise<WebSocketServer> {
+    // wait for server to have started
+    await this.#startDeferred.promise;
+
+    const ws = new WebSocketServer({
+      path,
+      server: this.httpServer,
+    });
+
+    this.#webSockets.push(ws);
+
+    return ws;
   }
 
   async start() {
@@ -89,10 +112,19 @@ class StiltHttp {
       });
     });
 
+    this.#startDeferred.resolve();
+
     this._printServerStarted(this.port);
   }
 
-  async close(): Promise<boolean> {
+  async close(): Promise<void> {
+    await Promise.all([
+      this.#closeHttp(),
+      this.#closeAllWs(),
+    ]);
+  }
+
+  async #closeHttp() {
     return new Promise((resolve, reject) => {
       if (!this.httpServer) {
         resolve(false);
@@ -106,6 +138,24 @@ class StiltHttp {
         }
 
         resolve(true);
+      });
+    });
+  }
+
+  async #closeAllWs() {
+    return Promise.all(this.#webSockets.map(async ws => {
+      return this.#closeOneWs(ws);
+    }));
+  }
+
+  async #closeOneWs(ws: WebSocketServer) {
+    return new Promise<void>((resolve, reject) => {
+      ws.close(err => {
+        if (err) {
+          reject(err);
+        }
+
+        resolve();
       });
     });
   }
@@ -136,7 +186,7 @@ class StiltHttp {
    * Add an endpoint of interest when printing server started log
    */
   declareEndpoint(endpointName, endpointPath) {
-    this._declaredEndpoints.push({ name: endpointName, path: endpointPath });
+    this.#declaredEndpoints.push({ name: endpointName, path: endpointPath });
   }
 
   /**
@@ -160,8 +210,8 @@ class StiltHttp {
       '---',
     ];
 
-    if (this._declaredEndpoints.length > 0) {
-      for (const endpoint of this._declaredEndpoints) {
+    if (this.#declaredEndpoints.length > 0) {
+      for (const endpoint of this.#declaredEndpoints) {
         lines.push([endpoint.name, localhost + endpoint.path]);
       }
 

@@ -164,6 +164,23 @@ export function assertIsFunction(item: any): asserts item is Function {
 
 export const FORCE_SEQUENTIAL_MODULE_IMPORT = process.env.JEST_WORKER_ID != null;
 
+type TResolve<T> = (value: T | PromiseLike<T>) => void;
+type TReject = (reason?: any) => void;
+
+export type TDeferred<T> = { promise: Promise<T>, resolve: TResolve<T>, reject: TReject };
+
+export function createDeferred<T>(): TDeferred<T> {
+  let resolve: TResolve<T>;
+  let reject: TReject;
+
+  const promise = new Promise<T>((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
+  });
+
+  return { promise, resolve, reject };
+}
+
 export function getValueName(value: any): string {
   if (typeof value !== 'object' || value === null) {
     return String(value);
