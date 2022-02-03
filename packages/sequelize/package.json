@@ -10,11 +10,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "author": "Guylian Cox <guyliancox@gmail.com>",
+  "author": "Zoé Cox <zoe@ephys.dev>",
   "license": "MIT",
   "types": "types",
   "peerDependencies": {
-    "sequelize": "^6.3.5"
+    "sequelize": "^6.15.0"
   },
   "dependencies": {
     "@stilt/core": "^0.21.0-alpha.16",

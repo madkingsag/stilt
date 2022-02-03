@@ -10,7 +10,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "author": "Guylian Cox <guyliancox@gmail.com>",
+  "author": "Zoé Cox <zoe@ephys.dev>",
   "license": "MIT",
   "types": "types",
   "dependencies": {
