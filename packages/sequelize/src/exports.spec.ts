@@ -1,5 +1,3 @@
-// @flow
-
 import * as seqExports from '.';
 
 describe('@stilt/sequelize', () => {

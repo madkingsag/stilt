@@ -1,6 +1,4 @@
-// @flow
-
-import { getAssociationMeta as getAssociations, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators';
+import { getAssociationMeta as getAssociations, HasMany, BelongsToMany, BelongsTo, HasOne } from './decorators.js';
 
 describe('@BelongsTo', () => {
   it('Adds association metadata of type "belongsTo" for later initialization', () => {
@@ -88,9 +86,10 @@ describe('@BelongsTo', () => {
     try {
       @BelongsTo(B, {
         as: 'b',
+        // @ts-expect-error
         inverse: 'a',
       })
-      // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       class A {}
     } catch (e) {
       expect(e.message).toEqual('@BelongsTo "inverse" property must be an object');
