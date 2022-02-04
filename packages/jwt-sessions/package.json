@@ -1,6 +1,6 @@
 {
   "name": "@stilt/jwt-sessions",
-  "version": "0.21.0-alpha.19",
+  "version": "0.21.0-alpha.20",
   "description": "Add JWT sessions to @stilt/http",
   "main": "dist/index.js",
   "type": "module",
@@ -28,8 +28,8 @@
   "homepage": "https://github.com/madkingsag/stilt#readme",
   "types": "types",
   "dependencies": {
-    "@stilt/core": "^0.21.0-alpha.16",
-    "@stilt/http": "^0.21.0-alpha.19",
+    "@stilt/core": "^0.21.0-alpha.20",
+    "@stilt/http": "^0.21.0-alpha.20",
     "jsonwebtoken": "^8.3.0",
     "koa-jwt": "^3.3.2",
     "lodash": "^4.17.10"
