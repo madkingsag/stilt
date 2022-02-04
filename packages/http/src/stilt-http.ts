@@ -9,6 +9,7 @@ import ip from 'ip';
 import Koa from 'koa';
 import Router from 'koa-better-router'; // TODO: replace with @koa/router
 import bodyParser from 'koa-bodyparser';
+import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 import { ContextProvider, IContextProvider } from './ContextProvider.js';
 
@@ -25,6 +26,8 @@ export type THttpContext = Koa.ParameterizedContext<Koa.DefaultState, Koa.Defaul
 
 const contextAsyncStorage = new AsyncLocalStorage<THttpContext>();
 const theSecret = Symbol('secret');
+
+const WebSocketKey = Symbol('webSocket');
 
 // TODO: @disableBodyParser decorator
 class StiltHttp {
@@ -97,6 +100,15 @@ class StiltHttp {
       server: this.httpServer,
     });
 
+    ws.on('connection', (webSocket, request) => {
+      const context = this.koa.createContext(request, null);
+      context[WebSocketKey] = webSocket;
+
+      webSocket.on('message', () => {
+        contextAsyncStorage.enterWith(context);
+      });
+    });
+
     this.#webSockets.push(ws);
 
     return ws;
@@ -165,6 +177,10 @@ class StiltHttp {
    */
   getCurrentContext(): THttpContext {
     return contextAsyncStorage.getStore();
+  }
+
+  getCurrentWebSocket(): WebSocket | null {
+    return contextAsyncStorage.getStore()?.[WebSocketKey] ?? null;
   }
 
   /**
