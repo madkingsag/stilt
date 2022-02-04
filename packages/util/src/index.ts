@@ -59,6 +59,7 @@ export function coalesce<T>(...args: T[]): T {
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 export type MaybePromise<T> = Promise<T> | T;
+export type MaybeArray<T> = T | T[];
 
 // eslint-disable-next-line max-len
 export async function awaitAllEntries<In, T extends { [key: string]: MaybePromise<In> }>(obj: T): Promise<{ [P in keyof T]: UnwrapPromise<T[P]> }>;

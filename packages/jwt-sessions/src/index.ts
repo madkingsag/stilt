@@ -1,21 +1,35 @@
-import util from 'util';
+import NodeUtil from 'node:util';
 import type { InjectableIdentifier, TRunnable, Factory } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
+import type { THttpContext } from '@stilt/http';
 import { StiltHttp, makeControllerInjector } from '@stilt/http';
+import type { MaybePromise, MaybeArray } from '@stilt/util';
+import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
-import type { Options as KoaJwtOptions } from 'koa-jwt';
-import koaJwt from 'koa-jwt';
+import getJwtFromHeader from 'koa-jwt/lib/resolvers/auth-header.js';
+import getJwtFromCookie from 'koa-jwt/lib/resolvers/cookie.js';
 import cloneDeep from 'lodash/cloneDeep.js';
 
-// TODO support secret, audience, issuer, etc from koa-jwt
 // TODO custom write / read token settings (note: could have a writer/reader and cookie/Auth reader/writers by default)
 // TODO cookie creation options
 
 const theSecret = Symbol('secret');
+const LiveSessionKey = Symbol('live-session');
+const ImmutableSessionKey = Symbol('immutable-session');
+
+type GetSecret = () => MaybeArray<string | Buffer>;
 
 type Config = {
   useCookies?: boolean | string,
-} & Omit<KoaJwtOptions, 'cookie'>;
+  secret: MaybeArray<string | Buffer> | GetSecret,
+  verifyOptions?: VerifyOptions,
+  signOptions?: SignOptions,
+  isRevoked?(ctx: THttpContext, token: object, tokenString: string): MaybePromise<boolean>,
+  getToken?(ctx: THttpContext, opts: Config): string,
+  debug?: typeof console.log | false,
+};
+
+type JwtDecoderOptions = Omit<Config, 'useCookies'> & { cookie: string | null };
 
 type IdentifierConfig = {
   /**
@@ -31,6 +45,7 @@ type IdentifierConfig = {
 };
 
 export class StiltJwtSessions {
+  #options: JwtDecoderOptions;
 
   static configure(config: Config | TRunnable<Config>, identifierConfig?: IdentifierConfig): Factory<StiltJwtSessions> {
 
@@ -55,7 +70,6 @@ export class StiltJwtSessions {
   }
 
   private readonly stiltHttp: StiltHttp;
-  private readonly contextKey: string;
 
   constructor(_app: App, stiltHttp: StiltHttp, config: Config, secret: Symbol) {
     if (secret !== theSecret) {
@@ -66,9 +80,7 @@ export class StiltJwtSessions {
 
     this.stiltHttp = stiltHttp;
 
-    const { useCookies, key = 'session-jwt', ...passDown } = config;
-
-    this.contextKey = key;
+    const { useCookies, ...passDown } = config;
 
     const cookieName = useCookies ? (
       typeof useCookies === 'string'
@@ -78,26 +90,24 @@ export class StiltJwtSessions {
 
     const koa = stiltHttp.koa;
 
-    koa.use(koaJwt({
-      secret: config.secret,
-      passthrough: true,
+    this.#options = {
       cookie: cookieName || null,
-      key,
       ...passDown,
-    }));
+    };
 
     koa.use(async (ctx, next) => {
-      const session = this.getSessionFromContext(ctx);
-
-      // copy the session to be able to compare with mutable session
-      const sessionCopy = cloneDeep(session);
-
       return next().then(() => {
-        const newSession = this.getSessionFromContext(ctx);
+        const liveSession = this.getSessionFromContext(ctx);
 
-        // check if mutable session has changed.
-        if (!util.isDeepStrictEqual(newSession, sessionCopy)) {
-          const encodedSession = jwt.sign(newSession, config.secret);
+        // @ts-expect-error
+        const sessionCopy = ctx[ImmutableSessionKey];
+
+        // check if mutable session has changed & send new session through headers if it did.
+        if (!NodeUtil.isDeepStrictEqual(liveSession, sessionCopy)) {
+          const validSecrets = getSecrets(config.secret);
+
+          const secretUsedForSigning = validSecrets.at(-1);
+          const encodedSession = jwt.sign(liveSession, secretUsedForSigning);
 
           if (useCookies) {
             ctx.response.set('Set-Cookie', `${cookieName}=${encodedSession}`);
@@ -115,22 +125,29 @@ export class StiltJwtSessions {
    * @param ctx - A Koa Context Object.
    * @returns the context.
    */
-  getSessionFromContext(ctx) {
-    if (!ctx.state) {
-      ctx.state = {};
+  async getSessionFromContext(ctx: THttpContext): Promise<object | null> {
+    // return cached version
+    if (LiveSessionKey in ctx) {
+      // @ts-expect-error
+      return ctx[LiveSessionKey];
     }
 
-    if (!ctx.state[this.contextKey]) {
-      ctx.state[this.contextKey] = {};
-    }
+    const session = await decodeJwt(ctx, this.#options);
 
-    return ctx.state[this.contextKey];
+    // @ts-expect-error
+    ctx[LiveSessionKey] = session;
+
+    // copy the session to be able to compare with mutable session
+    // @ts-expect-error
+    ctx[ImmutableSessionKey] = cloneDeep(session);
+
+    return session;
   }
 
   /**
    * @returns the session of the current context. Null if no context exists.
    */
-  getCurrentSession() {
+  async getCurrentSession(): Promise<object | null> {
     const context = this.stiltHttp.getCurrentContext();
 
     if (context == null) {
@@ -145,7 +162,7 @@ type WithSessionOptions = {
   key?: string,
 };
 
-const withSession = makeControllerInjector({
+const WithSession = makeControllerInjector({
   dependencies: [StiltJwtSessions],
   run([options]: [options?: WithSessionOptions], [provider]: [StiltJwtSessions]) {
     return ({ [options?.key ?? 'session']: provider.getCurrentSession() });
@@ -153,6 +170,99 @@ const withSession = makeControllerInjector({
 });
 
 export {
-  withSession,
-  withSession as WithSession,
+  WithSession,
 };
+
+function getSecrets(secret: Config['secret']): Array<string | Buffer> {
+  if (typeof secret === 'function') {
+    return getSecrets(secret());
+  }
+
+  if (!secret) {
+    throw new Error('Secret not provided');
+  }
+
+  if (!Array.isArray(secret)) {
+    return [secret];
+  }
+
+  return secret;
+}
+
+function getJwtFromContext(ctx) {
+  return ctx.authToken;
+}
+
+async function decodeJwt(ctx: THttpContext, options: JwtDecoderOptions): Promise<object | null> {
+  const tokenFinders = [getJwtFromContext, getJwtFromHeader, getJwtFromCookie];
+
+  if (typeof options.getToken === 'function') {
+    tokenFinders.unshift(options.getToken);
+  }
+
+  let token: string;
+  for (const tokenFinder of tokenFinders) {
+    const tmpToken = tokenFinder(ctx, options);
+
+    if (tmpToken) {
+      token = tmpToken;
+      break;
+    }
+  }
+
+  if (!token) {
+    if (options.debug) {
+      options.debug('No token found');
+    }
+
+    return null;
+  }
+
+  const validSecrets: Array<string | Buffer> = getSecrets(options.secret);
+
+  let decodedToken;
+  try {
+    decodedToken = await verifyJwtManySecrets(token, validSecrets, options.verifyOptions);
+  } catch (error) {
+    if (options.debug) {
+      options.debug('Failed to verify token', token, 'due to error', error, 'using secrets', validSecrets);
+    }
+
+    return null;
+  }
+
+  if (options.isRevoked) {
+    const tokenRevoked = await options.isRevoked(
+      ctx,
+      decodedToken,
+      token,
+    );
+    if (tokenRevoked) {
+      if (options.debug) {
+        options.debug('Token', decodedToken, token, 'is revoked');
+      }
+
+      return null;
+    }
+  }
+
+  return decodedToken;
+}
+
+async function verifyJwtPromise(token: string, secret: string | Buffer, options: VerifyOptions) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, secret, options, (err, result) => {
+      if (err) {
+        return void reject(err);
+      }
+
+      resolve(result);
+    });
+  });
+}
+
+async function verifyJwtManySecrets(token: string, secrets: Array<string | Buffer>, options: VerifyOptions) {
+  return Promise.any(secrets.map(async secret => {
+    return verifyJwtPromise(token, secret, options);
+  }));
+}
