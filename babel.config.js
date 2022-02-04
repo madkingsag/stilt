@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/prefer-module,import/no-commonjs */
+
 'use strict';
 
 module.exports = api => {

@@ -83,7 +83,7 @@ describe('@BelongsTo', () => {
 
     class B {}
 
-    try {
+    expect(() => {
       @BelongsTo(B, {
         as: 'b',
         // @ts-expect-error
@@ -91,10 +91,8 @@ describe('@BelongsTo', () => {
       })
       class A {}
 
-      expect(A).toEqual(A); // mute "unused" error
-    } catch (e) {
-      expect(e.message).toEqual('@BelongsTo "inverse" property must be an object');
-    }
+      getAssociations([A]);
+    }).toThrow('@BelongsTo "inverse" property must be an object');
   });
 
   it('Allows overriding options of inverse association', () => {

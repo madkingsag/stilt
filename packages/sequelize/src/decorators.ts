@@ -217,7 +217,7 @@ const BelongsTo = makeAssociationDecorator<BelongsToAssociationOptions>('belongs
     }
 
     if (typeof inverse !== 'object') {
-      throw new Error('@BelongsTo "inverse" property must be an object');
+      throw new TypeError('@BelongsTo "inverse" property must be an object');
     }
 
     // delete type from "inverse" so it does not get assigned when overriding for inverse association
@@ -303,7 +303,7 @@ function getSymmetricalHasAssociation(sourceParams) {
   }
 
   if (typeof inverse !== 'object' && typeof inverse !== 'string') {
-    throw new Error('@BelongsTo "inverse" property must be an object or string');
+    throw new TypeError('@BelongsTo "inverse" property must be an object or string');
   }
 
   // copy sourceParams for inverse params and override them with the contents of "inverse"
@@ -436,7 +436,7 @@ const BelongsToMany = makeAssociationDecorator<BelongsToManyAssociationOptions>(
     }
 
     if (typeof inverse !== 'object' && typeof inverse !== 'string') {
-      throw new Error('@BelongsTo "inverse" property must be an object or string');
+      throw new TypeError('@BelongsTo "inverse" property must be an object or string');
     }
 
     // copy sourceParams for inverse params and override them with the contents of "inverse"
@@ -497,11 +497,6 @@ export function getModelInitData(model: ModelStatic<any>): { options: Object, at
   };
 }
 
-export const belongsTo = BelongsTo;
-export const belongsToMany = BelongsToMany;
-export const hasOne = HasOne;
-export const hasMany = HasMany;
-
 export {
   getAssociationMeta,
   BelongsTo,
@@ -509,9 +504,7 @@ export {
   HasOne,
   HasMany,
   Options,
-  Options as options,
   Attributes,
-  Attributes as attributes,
 };
 
 export type {

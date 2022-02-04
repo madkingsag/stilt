@@ -1,7 +1,7 @@
 import type { Options as MulterOptions } from '@koa/multer';
 import Multer from '@koa/multer';
 import { makeControllerInjector, StiltHttp } from '@stilt/http';
-import RestError from './RestError.js';
+import RestError from './rest-error.js';
 
 export type UploadedFile = {
   fieldname: string,
@@ -72,17 +72,17 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
       // @ts-expect-error
       await middleware(context, val => val);
       files = context.files;
-    } catch (e) {
-      if (e.code === 'LIMIT_UNEXPECTED_FILE') {
+    } catch (error) {
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
         // @ts-expect-error
         const validFields = keys.map(key => fileConfigs[key]?.field ?? key);
-        throw new RestError(`Unexpected file ${JSON.stringify(e.field)}. Accepted file fields are ${validFields.map(val => JSON.stringify(val)).join(', ')}`)
+        throw new RestError(`Unexpected file ${JSON.stringify(error.field)}. Accepted file fields are ${validFields.map(val => JSON.stringify(val)).join(', ')}`)
           .withCode('ERR_UNEXPECTED_FILE')
           .withStatus(400);
       }
 
-      if (e.code === 'LIMIT_FILE_SIZE') {
-        const field = e.field;
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        const field = error.field;
         const maxSize = multerConfig?.limits?.fileSize;
 
         throw new RestError(`File ${JSON.stringify(field)} is too large. Max file size is ${maxSize} bytes`)
@@ -90,7 +90,7 @@ export const Files = makeControllerInjector<TFilesArgs, TFilesDeps>({
           .withStatus(400);
       }
 
-      throw e;
+      throw error;
     }
 
     // this happens if the front doesn't send anything

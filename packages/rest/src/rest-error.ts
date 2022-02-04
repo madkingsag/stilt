@@ -1,6 +1,10 @@
 export const IsRestError = Symbol('is-rest-error');
 
 export default class RestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RestError';
+  }
 
   [IsRestError] = true;
 

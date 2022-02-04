@@ -11,7 +11,7 @@ import Router from 'koa-better-router'; // TODO: replace with @koa/router
 import bodyParser from 'koa-bodyparser';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
-import { ContextProvider, IContextProvider } from './ContextProvider.js';
+import { ContextProvider, IContextProvider } from './context-provider.js';
 
 type Config = {
   port: number,

@@ -46,6 +46,8 @@ export class App {
 
   public readonly lifecycle = new Emittery();
 
+  // false positive
+  // eslint-disable-next-line unicorn/consistent-function-scoping
   private readonly _dependencyInjector = new DependencyInjector(newDependency => {
     this._onDependencyInstanciation(newDependency);
   });

@@ -2,13 +2,13 @@ import { makeControllerInjector, StiltHttp } from '@stilt/http';
 import type { TControllerInjector } from '@stilt/http/types/controllerInjectors';
 import { isPlainObject } from '@stilt/util';
 import type { Schema as JoiSchema } from 'joi';
-import RestError from './RestError.js';
+import RestError from './rest-error.js';
 
 let Joi;
 
 try {
   Joi = (await import('joi')).default;
-} catch (ignore) { /* ignore */ }
+} catch { /* ignore */ }
 
 function runValidation(paramValue, paramValidator, parameterSource, context, validationOpts, errorStatus) {
   if (paramValidator == null) {

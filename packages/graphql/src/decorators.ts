@@ -1,5 +1,5 @@
 import type { App } from '@stilt/core';
-import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controller-injectors.js';
 import { isPlainObject, getMethodName } from '@stilt/util';
 import setProperty from 'lodash/set.js';
 
@@ -119,8 +119,7 @@ export function classToResolvers(classOrInstance: Object, stiltApp: App): Object
     return resolvers;
   }
 
-  meta.forEach((options: GqlMeta, methodName: string) => {
-
+  for (const [methodName, options] of meta.entries()) {
     for (const resolverOption of options.resolverOptions) {
       const method = normalizeFunction(
         classOrInstance,
@@ -156,7 +155,7 @@ export function classToResolvers(classOrInstance: Object, stiltApp: App): Object
         resolve: val => val,
       });
     }
-  });
+  }
 
   return resolvers;
 }
@@ -193,8 +192,8 @@ function normalizeFunction(
 
     try {
       resultNode = await method.apply(classOrInstance, methodParameters);
-    } catch (e) {
-      resultError = e;
+    } catch (error) {
+      resultError = error;
     }
 
     return runPostResolvers(resultError, resultNode, options.postResolvers);
@@ -208,8 +207,8 @@ function runPostResolvers(err, value, resolvers) {
       try {
         value = resolver(err, value);
         err = null;
-      } catch (e) {
-        err = e;
+      } catch (error) {
+        err = error;
       }
     }
   }

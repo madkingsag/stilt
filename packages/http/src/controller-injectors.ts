@@ -86,10 +86,10 @@ export function wrapControllerWithInjectors(
 
       return {
         ...injectorMeta,
-        dependenciesInstances: instantiateDependencyTable(stiltApp, injectorMeta.dependencies).catch(e => {
+        dependenciesInstances: instantiateDependencyTable(stiltApp, injectorMeta.dependencies).catch(error => {
           const className = Class.name || Class.constructor.name;
           // TODO: add the name of the injector
-          throw new Error(`Failed to build controller ${className}#${methodName} as the dependency of one of its injectors failed to build: \n ${e.message}`);
+          throw new Error(`Failed to build controller ${className}#${methodName} as the dependency of one of its injectors failed to build: \n ${error.message}`);
         }),
       };
     });
@@ -97,8 +97,8 @@ export function wrapControllerWithInjectors(
   return async function withInjectedParameters(...methodParameters) {
 
     const promises = [];
-    for (let i = 0; i < injectorsMetaList.length; i++) {
-      promises.push(injectParameter(methodParameters, injectorsMetaList[i], Class, methodName));
+    for (const element of injectorsMetaList) {
+      promises.push(injectParameter(methodParameters, element, Class, methodName));
     }
 
     await Promise.all(promises);

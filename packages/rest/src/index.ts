@@ -2,16 +2,16 @@ import type { InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
 import type { Class } from '@stilt/core/types/typing';
 import { StiltHttp } from '@stilt/http';
-import { wrapControllerWithInjectors } from '@stilt/http/dist/controllerInjectors.js';
+import { wrapControllerWithInjectors } from '@stilt/http/dist/controller-injectors.js';
 import { asyncGlob, awaitMapAllEntries, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
-import { getRoutingMetadata } from './HttpMethodsDecorators.js';
-import { IsRestError } from './RestError.js';
+import { getRoutingMetadata } from './http-method-decorators.js';
+import { IsRestError } from './rest-error.js';
 
-export * from './HttpMethodsDecorators.js';
-export { default as RestError, IsRestError } from './RestError.js';
-export { PathParams, QueryParams, BodyParams, PathParams as pathParams, QueryParams as queryParams, BodyParams as bodyParams } from './ParameterDecorators.js';
-export { Files } from './Multipart.js';
-export type { UploadedFile } from './Multipart';
+export * from './http-method-decorators.js';
+export { default as RestError, IsRestError } from './rest-error.js';
+export { PathParams, QueryParams, BodyParams } from './parameter-decorators.js';
+export { Files } from './multipart.js';
+export type { UploadedFile } from './multipart.js';
 
 export interface JsonSerializer<T> {
   serialize(input: T): any | Promise<any>;
@@ -78,7 +78,7 @@ export class StiltRest {
     this.app = app;
 
     for (const controller of controllers) {
-      this.stiltHttp.registerRoute(controller.method, controller.path, this._wrapError(controller.handler));
+      this.stiltHttp.registerRoute(controller.method, controller.path, this.#wrapError(controller.handler));
     }
   }
 
@@ -198,8 +198,9 @@ export class StiltRest {
     return controllerModules;
   }
 
-  _wrapError(callback: Function) {
+  #wrapError(callback: Function) {
 
+    // eslint-disable-next-line unicorn/no-this-assignment
     const that = this;
 
     return function wrappedError(context) {
@@ -212,10 +213,10 @@ export class StiltRest {
 
         return val.then(
           asyncVal => that._formatSuccess(asyncVal, context),
-          e => formatError(e, context),
+          error => formatError(error, context),
         );
-      } catch (e) {
-        return formatError(e, context);
+      } catch (error) {
+        return formatError(error, context);
       }
     };
   }

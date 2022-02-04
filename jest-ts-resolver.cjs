@@ -18,7 +18,7 @@ function resolverTSAndTSX(path, options) {
 
     try {
       return resolver(path.replace(JAVASCRIPT_EXTENSION, '.ts'), options);
-    } catch (_) {
+    } catch {
       return resolver(path.replace(JAVASCRIPT_EXTENSION, '.tsx'), options);
     }
   }

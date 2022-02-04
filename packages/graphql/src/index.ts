@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { IResolvers } from '@graphql-tools/utils';
 import type { InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
@@ -34,7 +34,7 @@ import { useServer as useWsServer } from 'graphql-ws/lib/use/ws';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
 import { nanoid } from 'nanoid';
-import { classToResolvers } from './ResolveDecorator.js';
+import { classToResolvers } from './decorators.js';
 import { IsDevError } from './graphql-errors.js';
 
 export {
@@ -43,14 +43,14 @@ export {
   Query,
   OnSubscription,
   WithGraphqlQuery,
-} from './ResolveDecorator.js';
+} from './decorators.js';
 
 export {
   ThrowsUserErrors,
 
   UserError,
   IsUserError,
-} from './UserError.js';
+} from './user-error.js';
 
 export {
   DevError,
@@ -149,7 +149,7 @@ export class StiltGraphQl {
       if (Array.isArray(extraTypeDefs)) {
         for (const type of extraTypeDefs) {
           if (typeof type === 'function') {
-            throw new Error('function typedef is not currently supported.');
+            throw new TypeError('function typedef is not currently supported.');
           }
 
           allTypeDefs.push(type);
@@ -165,6 +165,7 @@ export class StiltGraphQl {
 
       const foundSchemas: string[] = [];
 
+      // eslint-disable-next-line unicorn/no-array-callback-reference
       const schemaFiles = await Promise.all(schemasFiles.map(readOrRequireFile));
       for (const schemaFile of schemaFiles) {
         for (const schemaFileEntry of Object.values(schemaFile)) {
@@ -365,22 +366,22 @@ export class StiltGraphQl {
       useWsServer({
         ...this.#config.subscriptionConfig,
         schema: this.#schema,
-        onConnect: (ctx) => {
-          this.#config.subscriptionConfig?.onConnect?.(ctx);
-
+        onConnect: async ctx => {
           const authToken = ctx.connectionParams?.authToken;
 
           if (authToken) {
             const httpContext = this.#httpServer.getCurrentContext();
             httpContext.authToken = authToken;
           }
+
+          await this.#config.subscriptionConfig?.onConnect?.(ctx);
         },
       }, webSocketServer);
     }
   }
 }
 
-async function readOrRequireFile(filePath) {
+async function readOrRequireFile(filePath: string) {
   const ext = path.parse(filePath).ext;
 
   if (ext === '.ts' || ext === '.js') {

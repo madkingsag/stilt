@@ -1,4 +1,4 @@
-import { makeControllerInjector } from './controllerInjectors.js';
+import { makeControllerInjector } from './controller-injectors.js';
 import { StiltHttp } from './stilt-http.js';
 
 const WithContext = makeControllerInjector({

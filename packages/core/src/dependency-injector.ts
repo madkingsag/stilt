@@ -1,4 +1,4 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import { awaitMapAllEntries, isPlainObject, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
 import type { Factory } from './factory';
 import { isFactory } from './factory.js';
@@ -20,8 +20,7 @@ export default class DependencyInjector {
   _idToFactoryMap = new Map<InjectableIdentifier, Factory<any> | Class<any>>();
   _idToInstanceMap = new Map<InjectableIdentifier | Factory<any>, any>();
 
-  constructor(private readonly _onNewDepCallback) {
-  }
+  constructor(private readonly _onNewDepCallback) {}
 
   registerFactory(factory: Factory<any>) {
     for (const id of factory.ids) {
@@ -39,7 +38,7 @@ export default class DependencyInjector {
   registerInstance<T>(identifier: InjectableIdentifier, instance: T) {
     if (this._idToInstanceMap.has(identifier) && this._idToInstanceMap.get(identifier) !== instance) {
       if (typeof identifier === 'function') {
-        throw new Error(`The application is trying to register two different instances of Class ${identifier.name} as the default instance for the class`);
+        throw new TypeError(`The application is trying to register two different instances of Class ${identifier.name} as the default instance for the class`);
       }
 
       throw new Error(`The application is trying to register two different injectables using the same identifier ${String(identifier)}`);
@@ -95,9 +94,9 @@ export default class DependencyInjector {
         try {
           // @ts-expect-error
           return await this._getInstance<T>(ClassItem, dependencyChain);
-        } catch (e) {
+        } catch (error) {
           // TODO: use { cause: e }
-          throw new Error(`Failed to build ${key}: \n ${e.message}`);
+          throw new Error(`Failed to build ${key}: \n ${error.message}`);
         }
       }, FORCE_SEQUENTIAL_MODULE_IMPORT);
     }
@@ -187,9 +186,9 @@ export default class DependencyInjector {
     let instances;
     try {
       instances = await this._getInstances(runnable.dependencies, dependencyChain);
-    } catch (e) {
+    } catch (error) {
       // TODO use .causedBy
-      throw new Error(`Error while instantiating a Runnable's dependencies: \n ${e.message}`);
+      throw new Error(`Error while instantiating a Runnable's dependencies: \n ${error.message}`);
     }
 
     if (Array.isArray(instances)) {
@@ -209,9 +208,9 @@ export default class DependencyInjector {
       try {
         const dependencies = await this._getInstances(initMeta.dependencies, dependencyChain);
         constructorArgs.push(dependencies);
-      } catch (e) {
+      } catch (error) {
         // TODO use .causedBy
-        throw new Error(`Error while instantiating class ${aClass.name}'s dependencies: \n ${e.message}`);
+        throw new Error(`Error while instantiating class ${aClass.name}'s dependencies: \n ${error.message}`);
       }
     }
 
@@ -247,7 +246,7 @@ export function AsyncModuleInit(
 ): void {
 
   if (typeof aClass !== 'function') {
-    throw new Error('@AsyncModuleInit can only be used on static class methods.');
+    throw new TypeError('@AsyncModuleInit can only be used on static class methods.');
   }
 
   if (!initMetaMap.has(aClass)) {
@@ -265,6 +264,8 @@ export function AsyncModuleInit(
 class CyclicDependencyError extends Error {
   constructor(steps) {
     super(`Cyclic dependency detected: ${steps.map(step => getDepName(step)).join(' → ')}`);
+
+    this.name = 'CyclicDependencyError';
   }
 }
 

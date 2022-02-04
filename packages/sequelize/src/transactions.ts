@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from 'async_hooks';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Sequelize, Transaction } from 'sequelize';
 
 const asyncStore = new AsyncLocalStorage<Transaction>();

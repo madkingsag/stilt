@@ -1,4 +1,4 @@
-import { addPostResolver } from './ResolveDecorator.js';
+import { addPostResolver } from './decorators.js';
 
 export const IsUserError = Symbol('is-user-error');
 
@@ -10,6 +10,7 @@ export class UserError extends Error {
     super(msg);
 
     this[IsUserError] = true;
+    this.name = 'UserError';
   }
 
   withCode(code: string): this {

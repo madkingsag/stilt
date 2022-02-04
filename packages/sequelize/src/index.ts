@@ -1,4 +1,4 @@
-import { URL } from 'url';
+import { URL } from 'node:url';
 import type { TRunnable, Logger, InjectableIdentifier, Factory } from '@stilt/core';
 import { isRunnable, runnable, factory, App } from '@stilt/core';
 import { asyncGlob } from '@stilt/util';
@@ -8,25 +8,18 @@ import { getAssociationMeta, getModelInitData } from './decorators.js';
 
 export {
   BelongsTo,
-  belongsTo,
 
   BelongsToMany,
-  belongsToMany,
 
   HasMany,
-  hasMany,
 
   // Attribute,
-  // attribute,
 
   Attributes,
-  attributes,
 
   Options,
-  options,
 
   HasOne,
-  hasOne,
 } from './decorators.js';
 
 export type {
@@ -150,11 +143,11 @@ export class StiltSequelize {
     assertDialect(dialect);
 
     this.sequelize = new Sequelize(
-      uri.pathname.substr(1),
+      uri.pathname.slice(1),
       uri.username,
       uri.password,
       {
-        ...(this.config.sequelizeOptions || {}),
+        ...this.config.sequelizeOptions,
         host: uri.hostname,
         port: Number(uri.port),
         dialect,
@@ -216,7 +209,7 @@ async function loadModels(modelsGlob, sequelize) {
     const model = modelModule.default;
 
     if (typeof model !== 'function') {
-      throw new Error(`Could not load Sequelize Model in file ${file}. Make sure a Class is exported`);
+      throw new TypeError(`Could not load Sequelize Model in file ${file}. Make sure a Class is exported`);
     }
 
     return model;
