@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from 'async_hooks';
-import type { Server } from 'http';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { Server } from 'node:http';
 import type { Factory, InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
 import type { TDeferred } from '@stilt/util';
@@ -254,9 +254,7 @@ function printTable(lines) {
 
   let dividerLength = 0;
   let titleLength = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
+  for (const line of lines) {
     if (Array.isArray(line)) {
       const title = line[0];
       if (titleLength < title.length) {
@@ -315,7 +313,7 @@ function clearAinsiColors(str: string): string {
   // source: https://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
 
   // eslint-disable-next-line no-control-regex
-  return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+  return str.replace(/[\u001B\u009B][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
 }
 
 export { StiltHttp };

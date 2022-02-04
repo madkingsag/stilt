@@ -1,5 +1,5 @@
-import assert from 'assert';
-import pathUtil from 'path';
+import assert from 'node:assert';
+import pathUtil from 'node:path';
 import glob from 'glob';
 
 export function hasOwnProperty<X extends {}, Y extends PropertyKey>(
@@ -54,7 +54,7 @@ export function coalesce<T>(...args: T[]): T {
     }
   }
 
-  return args[args.length - 1];
+  return args.at(-1);
 }
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
@@ -73,8 +73,7 @@ export async function awaitAllEntries<In, T extends ({ [key: string]: MaybePromi
   const keys = Object.keys(obj);
 
   const resolvedObject = Object.create(null);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
+  for (const [i, key] of keys.entries()) {
 
     resolvedObject[key] = values[i];
   }
@@ -134,9 +133,9 @@ export async function awaitMapAllEntries<In, Out, T extends ({ [key: string]: In
     if (Array.isArray(obj)) {
       const out = [];
 
-      for (let i = 0; i < obj.length; i++){
+      for (const [i, element] of obj.entries()){
         // eslint-disable-next-line no-await-in-loop
-        out.push(await callback(obj[i], i));
+        out.push(await callback(element, i));
       }
 
       return out;
