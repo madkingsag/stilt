@@ -125,14 +125,14 @@ export class StiltJwtSessions {
    * @param ctx - A Koa Context Object.
    * @returns the context.
    */
-  async getSessionFromContext(ctx: THttpContext): Promise<object | null> {
+  async getSessionFromContext(ctx: THttpContext): Promise<object> {
     // return cached version
     if (LiveSessionKey in ctx) {
       // @ts-expect-error
       return ctx[LiveSessionKey];
     }
 
-    const session = await decodeJwt(ctx, this.#options);
+    const session = await decodeJwt(ctx, this.#options) ?? {};
 
     // @ts-expect-error
     ctx[LiveSessionKey] = session;
@@ -147,7 +147,7 @@ export class StiltJwtSessions {
   /**
    * @returns the session of the current context. Null if no context exists.
    */
-  async getCurrentSession(): Promise<object | null> {
+  async getCurrentSession(): Promise<object> {
     const context = this.stiltHttp.getCurrentContext();
 
     if (context == null) {
