@@ -1,6 +1,6 @@
 {
   "name": "@stilt/http",
-  "version": "0.21.0-alpha.20",
+  "version": "0.21.0-alpha.21",
   "description": "Core component of the stilt framework",
   "main": "dist/index.js",
   "type": "module",
@@ -14,11 +14,11 @@
   "license": "MIT",
   "types": "types",
   "devDependencies": {
-    "@stilt/core": "^0.21.0-alpha.20",
+    "@stilt/core": "^0.21.0-alpha.21",
     "@types/koa": "^2.13.4"
   },
   "dependencies": {
-    "@stilt/util": "^0.21.0-alpha.20",
+    "@stilt/util": "^0.21.0-alpha.21",
     "@types/ws": "^8.2.2",
     "chalk": "^2.4.2",
     "ip": "^1.1.5",
