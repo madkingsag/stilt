@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import type { IResolvers } from '@graphql-tools/utils';
 import type { InjectableIdentifier, TRunnable } from '@stilt/core';
 import { App, factory, isRunnable, runnable } from '@stilt/core';
 import { StiltHttp } from '@stilt/http';
+import type { MaybePromise } from '@stilt/util';
 import { asyncGlob, awaitMapAllEntries, coalesce, FORCE_SEQUENTIAL_MODULE_IMPORT } from '@stilt/util';
 import type {
   GraphQLNamedType,
@@ -27,6 +29,8 @@ import {
   makeExecutableSchema,
   mergeTypeDefs,
 } from 'graphql-tools';
+import type { ServerOptions } from 'graphql-ws/lib/server.js';
+import { useServer as useWsServer } from 'graphql-ws/lib/use/ws';
 import graphqlHTTP from 'koa-graphql';
 import mount from 'koa-mount';
 import { nanoid } from 'nanoid';
@@ -35,6 +39,9 @@ import { IsDevError } from './graphql-errors.js';
 
 export {
   Resolve,
+  Mutation,
+  Query,
+  OnSubscription,
   WithGraphqlQuery,
 } from './ResolveDecorator.js';
 
@@ -51,11 +58,23 @@ export {
 } from './graphql-errors.js';
 
 export type Config = {
-  typeDefsGlob?: string,
-  resolversGlob?: string,
+  /**
+   * A file glob to load file that include the type definitions (i.e. Schema files).
+   * Set to false if you want to disable globbing and use {@link Config.typeDefs} instead.
+   */
+  typeDefsGlob?: string | false,
+
+  /**
+   * A file glob to load resolver classes.
+   * Set to false if you want to disable globbing and use {@link Config.resolvers} instead.
+   */
+  resolversGlob?: string | false,
 
   typeDefs?: IExecutableSchemaDefinition['typeDefs'],
-  resolvers?: IExecutableSchemaDefinition['resolvers'],
+  /**
+   * Accepts resolvers from graphql-tools, or Resolver Classes (or instances) from Stilt
+   */
+  resolvers?: IExecutableSchemaDefinition['resolvers'] | Array<IResolvers<any, any> | Object>,
 
   useGraphiql?: boolean,
   endpoint?: string,
@@ -66,6 +85,8 @@ export type Config = {
   },
   directiveResolvers?: IDirectiveResolvers,
   schemaTransforms?: ExecutableSchemaTransformation[],
+
+  subscriptionConfig?: Omit<ServerOptions, 'schema'>,
 };
 
 type IdentifierConfig = {
@@ -84,6 +105,9 @@ type IdentifierConfig = {
 const theSecret = Symbol('secret');
 
 export class StiltGraphQl {
+  #schema: GraphQLSchema;
+  #httpServer: StiltHttp;
+  #config: Config;
 
   static configure(config: Config | TRunnable<Config> = {}, identifierConfig?: IdentifierConfig) {
     const getConfig: TRunnable<Config> = isRunnable(config) ? config : runnable(() => config);
@@ -108,71 +132,19 @@ export class StiltGraphQl {
 
   private static async asyncModuleInit(app: App, stiltHttp: StiltHttp, config: Config, secret: symbol) {
 
-    const schemaGlob = config.typeDefsGlob || '**/*.+(schema.{js,mjs,cjs,ts,mts,cts}|graphqls)';
-    const resolverGlob = config.resolversGlob || '**/*.resolver.{js,mjs,cjs,ts,mts,cts}';
+    const schemaGlob = config.typeDefsGlob ?? '**/*.+(schema.{js,mjs,cjs,ts,mts,cts}|graphqls)';
+    const resolverGlob = config.resolversGlob ?? '**/*.resolver.{js,mjs,cjs,ts,mts,cts}';
 
     const [types, resolvers] = await Promise.all([
-      this._loadTypes(schemaGlob, config.typeDefs),
-      this._loadResolvers(app, resolverGlob),
+      this.#loadTypes(schemaGlob || null, config.typeDefs),
+      this.#loadResolvers(resolverGlob || null, config.resolvers, app),
     ]);
-
-    if (config.resolvers) {
-      if (Array.isArray(config.resolvers)) {
-        resolvers.push(...config.resolvers);
-      } else {
-        resolvers.push(config.resolvers);
-      }
-    }
 
     return new StiltGraphQl(app, stiltHttp, config, { types, resolvers }, secret);
   }
 
-  private static async _loadTypes(schemaGlob: string, extraTypeDefs: ITypeDefinitions | undefined) {
-    const schemasFiles = await asyncGlob(schemaGlob);
-
-    if (schemasFiles.length === 0) {
-      return null;
-    }
-
-    const foundSchemas: string[] = [];
-    const foundNamedTypes: GraphQLNamedType[] = [];
-
-    const schemaFiles = await Promise.all(schemasFiles.map(readOrRequireFile));
-    for (const schemaFile of schemaFiles) {
-      for (const schemaFileEntry of Object.values(schemaFile)) {
-        if (typeof schemaFileEntry === 'string') {
-          foundSchemas.push(schemaFileEntry);
-        } else if (isNamedType(schemaFileEntry)) {
-          foundNamedTypes.push(schemaFileEntry);
-        } else {
-          throw new Error(`${schemaFile} exported a non-string, non-named type value`);
-        }
-      }
-    }
-
-    if (foundSchemas.length === 0) {
-      return null;
-    }
-
-    const namedTypeSchema = new GraphQLSchema({
-      types: [
-        new GraphQLObjectType({
-          name: 'Query',
-          fields: {},
-        }),
-        new GraphQLObjectType({
-          name: 'Mutation',
-          fields: {},
-        }),
-        new GraphQLObjectType({
-          name: 'Subscription',
-          fields: {},
-        }),
-        ...foundNamedTypes,
-      ],
-    });
-
-    const allTypeDefs: Array<string | Source | DocumentNode | GraphQLSchema> = [namedTypeSchema, ...foundSchemas];
+  static async #loadTypes(schemaGlob: string | null, extraTypeDefs: ITypeDefinitions | undefined) {
+    const allTypeDefs: Array<string | Source | DocumentNode | GraphQLSchema> = [];
     if (extraTypeDefs) {
       if (Array.isArray(extraTypeDefs)) {
         for (const type of extraTypeDefs) {
@@ -187,17 +159,62 @@ export class StiltGraphQl {
       }
     }
 
+    const foundNamedTypes: GraphQLNamedType[] = [];
+    if (schemaGlob) {
+      const schemasFiles = await asyncGlob(schemaGlob);
+
+      const foundSchemas: string[] = [];
+
+      const schemaFiles = await Promise.all(schemasFiles.map(readOrRequireFile));
+      for (const schemaFile of schemaFiles) {
+        for (const schemaFileEntry of Object.values(schemaFile)) {
+          if (typeof schemaFileEntry === 'string') {
+            foundSchemas.push(schemaFileEntry);
+          } else if (isNamedType(schemaFileEntry)) {
+            foundNamedTypes.push(schemaFileEntry);
+          } else {
+            throw new Error(`${schemaFile} exported a non-string, non-named type value`);
+          }
+        }
+      }
+
+      const namedTypeSchema = new GraphQLSchema({
+        types: [
+          new GraphQLObjectType({
+            name: 'Query',
+            fields: {},
+          }),
+          new GraphQLObjectType({
+            name: 'Mutation',
+            fields: {},
+          }),
+          new GraphQLObjectType({
+            name: 'Subscription',
+            fields: {},
+          }),
+          ...foundNamedTypes,
+        ],
+      });
+
+      allTypeDefs.push(namedTypeSchema, ...foundSchemas);
+    }
+
     return {
       typeDefs: mergeTypeDefs(allTypeDefs),
       namedTypes: foundNamedTypes,
     };
   }
 
-  private static async _loadResolvers(app: App, resolverGlob: string) {
-    const resolverFiles = await asyncGlob(resolverGlob);
+  static async #loadResolvers(resolverGlob: string | null, extraResolvers: Config['resolvers'], app: App) {
+    const allRawResolvers = [];
 
-    if (resolverFiles.length === 0) {
-      return null;
+    // resolvers passed to config manually
+    if (extraResolvers) {
+      if (Array.isArray(extraResolvers)) {
+        allRawResolvers.push(...extraResolvers);
+      } else {
+        allRawResolvers.push(extraResolvers);
+      }
     }
 
     /*
@@ -207,37 +224,53 @@ export class StiltGraphQl {
      * - A GraphQL type (eg. a GraphQL enum, any export)
      */
 
-    const resolverExports = await awaitMapAllEntries(resolverFiles, readOrRequireFile, FORCE_SEQUENTIAL_MODULE_IMPORT);
+    // resolvers loaded automatically from files
+    if (resolverGlob) {
+      const resolverFiles = await asyncGlob(resolverGlob);
+      const resolverModules = await awaitMapAllEntries(resolverFiles, readOrRequireFile, FORCE_SEQUENTIAL_MODULE_IMPORT);
 
-    const resolverInstancePromises = [];
-    for (const resolverExport of resolverExports) {
-      for (const exportKey of Object.keys(resolverExport)) {
-        const rawResolver = resolverExport[exportKey];
+      for (const resolverExport of resolverModules) {
+        for (const exportKey of Object.keys(resolverExport)) {
+          const rawResolver = resolverExport[exportKey];
 
-        if (isNamedType(rawResolver)) {
-          resolverInstancePromises.push({
-            [rawResolver.name]: rawResolver,
-          });
-        }
-      }
+          if (rawResolver == null) {
+            continue;
+          }
 
-      if ('default' in resolverExport && !isType(resolverExport.default)) {
-        resolverInstancePromises.push(classToResolvers(resolverExport.default, app));
+          const typeOfResolver = typeof rawResolver;
+          if (typeOfResolver !== 'function' && typeOfResolver !== 'object') {
+            continue;
+          }
 
-        if (typeof resolverExport.default === 'function') {
-          resolverInstancePromises.push(
-            app.instantiate(resolverExport.default)
-              .then(instance => classToResolvers(instance, app)),
-          );
+          allRawResolvers.push(rawResolver);
         }
       }
     }
 
-    const resolverInstances = await Promise.all(resolverInstancePromises);
+    const resolverInstancePromises: Array<MaybePromise<object>> = [];
 
-    // TODO: check we can remove mergeResolvers
+    for (const rawResolver of allRawResolvers) {
+      if (isNamedType(rawResolver)) {
+        resolverInstancePromises.push({
+          [rawResolver.name]: rawResolver,
+        });
 
-    return resolverInstances;
+        continue;
+      }
+
+      if (isType(rawResolver)) {
+        continue;
+      }
+
+      if (typeof rawResolver === 'function') {
+        resolverInstancePromises.push(
+          classToResolvers(rawResolver, app),
+          app.instantiate(rawResolver).then(instance => classToResolvers(instance, app)),
+        );
+      }
+    }
+
+    return Promise.all(resolverInstancePromises);
   }
 
   constructor(app: App, server: StiltHttp, config: Config, { types, resolvers }, secret: symbol) {
@@ -246,6 +279,9 @@ export class StiltGraphQl {
         + '=> If you\'re trying to instantiate it by doing new StiltGraphQl(), call StiltGraphQl.configure(config) & pass the returned module to App.use instead.\n'
         + '=> If you\'re injecting this module through @Inject or similar, make sure this module was registered through App.use(StiltGraphQl.configure(config))');
     }
+
+    this.#httpServer = server;
+    this.#config = config;
 
     const useGraphiql = coalesce(config.useGraphiql, true);
     const endpoint = coalesce(config.endpoint, '/graphql');
@@ -316,6 +352,19 @@ export class StiltGraphQl {
         };
       },
     })));
+
+    this.#schema = schema;
+
+    app.lifecycle.on('start', async () => this.#start());
+  }
+
+  async #start() {
+    const webSocketServer = await this.#httpServer.startWebSocketServer('/graphql');
+
+    useWsServer({
+      ...this.#config.subscriptionConfig,
+      schema: this.#schema,
+    }, webSocketServer);
   }
 }
 

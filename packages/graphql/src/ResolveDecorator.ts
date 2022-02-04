@@ -5,27 +5,27 @@ import setProperty from 'lodash/set.js';
 
 type ClassGqlMeta = Map</* methodName */ string | symbol, GqlMeta>;
 
-const resolverMetaPerClass = new WeakMap<Object, ClassGqlMeta>();
+const ResolverMetaKey = Symbol('resolver-meta');
 
 type ResolverOptions = { schemaPath: string, parentKey?: string };
 
 type GqlMeta = {
   resolverOptions: ResolverOptions[],
-  // subscriptionSchemaPath: string[],
+  subscriptionSchemaPath: string[],
   queryAsParameters?: number,
   postResolvers: Function[],
 };
 
 function getGqlMetaForClass(classOrInstance: Object, methodName: string | symbol): GqlMeta {
-  if (!resolverMetaPerClass.has(classOrInstance)) {
-    resolverMetaPerClass.set(classOrInstance, new Map());
+  if (!(ResolverMetaKey in classOrInstance)) {
+    classOrInstance[ResolverMetaKey] = new Map();
   }
 
-  const classResolverMeta = resolverMetaPerClass.get(classOrInstance)!;
+  const classResolverMeta = classOrInstance[ResolverMetaKey]!;
   if (!classResolverMeta.has(methodName)) {
     classResolverMeta.set(methodName, {
       resolverOptions: [],
-      // subscriptionSchemaPath: [],
+      subscriptionSchemaPath: [],
       postResolvers: [],
     });
   }
@@ -44,13 +44,21 @@ export function Resolve(schemaPath: string, opts?: { parentKey?: string }): Meth
   };
 }
 
-// export function Subscribe(schemaPath: string): MethodDecorator {
-//   return function decorate(classOrInstance, methodName) {
-//     const resolverOptions = getGqlMetaForClass(classOrInstance, methodName);
-//
-//     resolverOptions.subscriptionSchemaPath.push(schemaPath);
-//   };
-// }
+export function Mutation(schemaPath: string, opts?: { parentKey?: string }): MethodDecorator {
+  return Resolve(`Mutation.${schemaPath}`, opts);
+}
+
+export function Query(schemaPath: string, opts?: { parentKey?: string }): MethodDecorator {
+  return Resolve(`Query.${schemaPath}`, opts);
+}
+
+export function OnSubscription(schemaPath: string): MethodDecorator {
+  return function decorate(classOrInstance, methodName) {
+    const gqlOptions = getGqlMetaForClass(classOrInstance, methodName);
+
+    gqlOptions.subscriptionSchemaPath.push(`Subscription.${schemaPath}`);
+  };
+}
 
 export function WithGraphqlQuery(paramNum: number): MethodDecorator {
 
@@ -84,22 +92,20 @@ export function addPostResolver(
  * @param classOrInstance The function on which the metadata has been attached
  * @return The routing metadata
  */
-function getResolverMetadata(classOrInstance: Object): ClassGqlMeta | null {
+function getGqlMeta(classOrInstance: Object): ClassGqlMeta | null {
   if (classOrInstance == null) {
     return null;
   }
 
-  return resolverMetaPerClass.get(classOrInstance) ?? null;
+  return classOrInstance[ResolverMetaKey] ?? null;
 }
 
-// export function classToSubscriptionHandler(classOrInstance: Object, stiltApp: App): Object {
-//
-// }
-
 export function classToResolvers(classOrInstance: Object, stiltApp: App): Object {
+  const resolvers = Object.create(null);
+
   // non objects should map to nothing
   if (classOrInstance === null || (typeof classOrInstance !== 'object' && typeof classOrInstance !== 'function')) {
-    return {};
+    return resolvers;
   }
 
   // POJOs should be used as-is
@@ -107,12 +113,11 @@ export function classToResolvers(classOrInstance: Object, stiltApp: App): Object
     return classOrInstance;
   }
 
-  const meta: ClassGqlMeta | null = getResolverMetadata(classOrInstance);
-  if (!meta) {
-    return {};
-  }
+  const meta: ClassGqlMeta | null = getGqlMeta(classOrInstance);
 
-  const resolvers = Object.create(null);
+  if (!meta) {
+    return resolvers;
+  }
 
   meta.forEach((options: GqlMeta, methodName: string) => {
 
@@ -130,6 +135,26 @@ export function classToResolvers(classOrInstance: Object, stiltApp: App): Object
       );
 
       setProperty(resolvers, resolverOption.schemaPath, method);
+    }
+
+    for (const subscriptionSchemaPath of options.subscriptionSchemaPath) {
+      const method = normalizeFunction(
+        classOrInstance,
+        wrapControllerWithInjectors(
+          classOrInstance,
+          methodName,
+          classOrInstance[methodName],
+          stiltApp,
+        ),
+        options,
+        { schemaPath: subscriptionSchemaPath },
+      );
+
+      setProperty(resolvers, subscriptionSchemaPath, {
+        subscribe: method,
+        // pass down value yielded by subscription
+        resolve: val => val,
+      });
     }
   });
 

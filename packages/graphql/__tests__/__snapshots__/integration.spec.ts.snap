@@ -1,0 +1,49 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Resolvers supports custom controller injectors 1`] = `
+Object {
+  "data": Object {
+    "comment": Object {
+      "content": "The comment",
+    },
+  },
+}
+`;
+
+exports[`Subscriptions supports creating a Subscription handler with @OnSubscription 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "newComment": Object {
+        "content": "first comment",
+      },
+    },
+  },
+  Object {
+    "data": Object {
+      "newComment": Object {
+        "content": "second comment",
+      },
+    },
+  },
+]
+`;
+
+exports[`Subscriptions supports custom controller injectors 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "newComment": Object {
+        "content": "first comment",
+      },
+    },
+  },
+  Object {
+    "data": Object {
+      "newComment": Object {
+        "content": "second comment",
+      },
+    },
+  },
+]
+`;
