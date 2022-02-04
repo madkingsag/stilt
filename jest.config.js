@@ -6,5 +6,5 @@ module.exports = {
   },
   testEnvironment: 'node',
   resolver: '<rootDir>/jest-ts-resolver.cjs',
-  testPathIgnorePatterns: ['node_modules', 'dist']
+  testPathIgnorePatterns: ['node_modules', 'dist'],
 };
