@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports,import/no-commonjs */
 
 function getResolver() {
   // eslint-disable-next-line import/no-extraneous-dependencies

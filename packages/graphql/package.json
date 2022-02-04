@@ -27,6 +27,8 @@
   },
   "devDependencies": {
     "@types/node-fetch": "^2.5.12",
-    "node-fetch": "^2.6.7"
+    "get-port": "^5.1.1",
+    "node-fetch": "^2.6.7",
+    "ws": "^8.4.2"
   }
 }

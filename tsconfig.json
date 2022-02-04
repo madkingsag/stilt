@@ -22,7 +22,8 @@
     "moduleResolution": "Node"
   },
   "include": [
-    "packages/**/src/**/*"
+    "packages/**/src/**/*",
+    "packages/**/__tests__/**/*"
   ],
   "exclude": [
     "node_modules"

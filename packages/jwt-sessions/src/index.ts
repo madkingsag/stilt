@@ -86,7 +86,7 @@ export class StiltJwtSessions {
       ...passDown,
     }));
 
-    koa.use((ctx, next) => {
+    koa.use(async (ctx, next) => {
       const session = this.getSessionFromContext(ctx);
 
       // copy the session to be able to compare with mutable session

@@ -8,7 +8,6 @@ const ruleOverrides = {
   'babel/new-cap': 0,
 };
 
-// eslint-disable-next-line import/no-commonjs
 module.exports = {
   extends: '@foobarhq/eslint-config',
   rules: ruleOverrides,

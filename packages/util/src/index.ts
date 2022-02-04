@@ -7,6 +7,8 @@ export function hasOwnProperty<X extends {}, Y extends PropertyKey>(
   propertyKey: Y,
 ): obj is X & Record<Y, unknown> {
 
+  // tsc is not ready
+  // eslint-disable-next-line prefer-object-has-own
   return Object.prototype.hasOwnProperty.call(obj, propertyKey);
 }
 
@@ -120,7 +122,7 @@ export function mapEntries<In, Out, T extends ({ [key: string]: In })>(
 export async function awaitMapAllEntries<In, Out, T extends { [key: string]: In }>(obj: T, callback: (value: In, key: string | number) => MaybePromise<Out>, sequential?: boolean): Promise<{ [P in keyof T]: Out }>;
 // eslint-disable-next-line max-len
 export async function awaitMapAllEntries<In, Out>(obj: In[], callback: (value: In, key: string | number) => MaybePromise<Out>, sequential?: boolean): Promise<Out[]>;
-// eslint-disable-next-line max-len
+
 export async function awaitMapAllEntries<In, Out, T extends ({ [key: string]: In })>(
   obj: T | In[],
   callback: (value: In, key: string | number) => MaybePromise<Out>,

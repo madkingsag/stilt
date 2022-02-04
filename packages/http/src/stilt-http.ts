@@ -27,7 +27,7 @@ export type THttpContext = Koa.ParameterizedContext<Koa.DefaultState, Koa.Defaul
 const contextAsyncStorage = new AsyncLocalStorage<THttpContext>();
 const theSecret = Symbol('secret');
 
-const WebSocketKey = Symbol('webSocket');
+const WebSocketKey: unique symbol = Symbol('webSocket');
 
 // TODO: @disableBodyParser decorator
 class StiltHttp {
@@ -102,6 +102,7 @@ class StiltHttp {
 
     ws.on('connection', (webSocket, request) => {
       const context = this.koa.createContext(request, null);
+      // @ts-expect-error
       context[WebSocketKey] = webSocket;
 
       webSocket.on('message', () => {
@@ -179,8 +180,14 @@ class StiltHttp {
     return contextAsyncStorage.getStore();
   }
 
+  /**
+   * @returns the current websocket, or null if called outside of a websocket context
+   */
   getCurrentWebSocket(): WebSocket | null {
-    return contextAsyncStorage.getStore()?.[WebSocketKey] ?? null;
+    const context = this.getCurrentContext();
+
+    // @ts-expect-error
+    return context?.[WebSocketKey] ?? null;
   }
 
   /**

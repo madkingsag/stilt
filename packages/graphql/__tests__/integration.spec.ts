@@ -1,12 +1,12 @@
+import assert from 'assert/strict';
+import crypto from 'crypto';
 import { App } from '@stilt/core';
 import { makeControllerInjector, StiltHttp } from '@stilt/http';
 import getPort from 'get-port';
-import { StiltGraphQl, OnSubscription, Query } from '../src/index.js';
 import { createClient } from 'graphql-ws';
-import crypto from 'crypto';
-import ws from 'ws';
-import assert from 'assert/strict';
 import fetch from 'node-fetch';
+import ws from 'ws';
+import { StiltGraphQl, OnSubscription, Query } from '../src/index.js';
 
 async function buildSimpleApp(): Promise<[app: App, port: number]> {
   const app = new App();
@@ -27,7 +27,7 @@ const WithViewer = makeControllerInjector<[], { http: StiltHttp }>({
     const context = http.getCurrentContext();
     assert(context != null, 'context is nullish!');
 
-    return { ['viewer']: new User() };
+    return { viewer: new User() };
   },
 });
 
@@ -71,8 +71,8 @@ describe('Resolvers', () => {
           query {
             comment { content }
           }
-        `
-      })
+        `,
+      }),
     });
 
     const body = await res.json();
@@ -87,7 +87,7 @@ describe('Subscriptions', () => {
   it('supports creating a Subscription handler with @OnSubscription', async () => {
     class MyResolver {
       @OnSubscription('newComment')
-      async* onSubscriptionToNewComment() {
+      async *onSubscriptionToNewComment() {
         yield { content: 'first comment' };
         yield { content: 'second comment' };
       }
@@ -125,7 +125,7 @@ describe('Subscriptions', () => {
     class MyResolver {
       @WithViewer(0)
       @OnSubscription('newComment')
-      async* onSubscriptionToNewComment(params: { viewer: User }) {
+      async *onSubscriptionToNewComment(params: { viewer: User }) {
         assert(params.viewer != null, 'viewer should not be null when using @OnSubscription');
 
         yield { content: 'first comment' };
@@ -162,7 +162,7 @@ describe('Subscriptions', () => {
   });
 });
 
-function collectSubscription(port: number, query: string) {
+async function collectSubscription(port: number, query: string) {
   const client = createClient({
     url: `ws://localhost:${port}/graphql`,
     webSocketImpl: ws,
