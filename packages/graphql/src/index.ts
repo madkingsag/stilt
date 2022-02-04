@@ -365,6 +365,16 @@ export class StiltGraphQl {
       useWsServer({
         ...this.#config.subscriptionConfig,
         schema: this.#schema,
+        onConnect: (ctx) => {
+          this.#config.subscriptionConfig?.onConnect?.(ctx);
+
+          const authToken = ctx.connectionParams?.authToken;
+
+          if (authToken) {
+            const httpContext = this.#httpServer.getCurrentContext();
+            httpContext.authToken = authToken;
+          }
+        },
       }, webSocketServer);
     }
   }

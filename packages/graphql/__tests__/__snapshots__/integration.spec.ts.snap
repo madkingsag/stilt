@@ -10,6 +10,18 @@ Object {
 }
 `;
 
+exports[`Subscriptions integrates with @stilt/jwt-sessions 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "newComment": Object {
+        "content": "first comment",
+      },
+    },
+  },
+]
+`;
+
 exports[`Subscriptions supports creating a Subscription handler with @OnSubscription 1`] = `
 Array [
   Object {

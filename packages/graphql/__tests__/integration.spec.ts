@@ -1,7 +1,8 @@
-import assert from 'assert/strict';
-import crypto from 'crypto';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { App } from '@stilt/core';
 import { makeControllerInjector, StiltHttp } from '@stilt/http';
+import { StiltJwtSessions } from '@stilt/jwt-sessions';
 import getPort from 'get-port';
 import { createClient } from 'graphql-ws';
 import fetch from 'node-fetch';
@@ -115,7 +116,7 @@ describe('Subscriptions', () => {
 
     await app.start();
 
-    const results = await collectSubscription(port, `subscription { newComment { content } }`);
+    const results = await collectSubscription(port, undefined, `subscription { newComment { content } }`);
     expect(results).toMatchSnapshot();
 
     await app.close();
@@ -155,18 +156,75 @@ describe('Subscriptions', () => {
 
     await app.start();
 
-    const results = await collectSubscription(port, `subscription { newComment { content } }`);
+    const results = await collectSubscription(port, undefined, `subscription { newComment { content } }`);
+    expect(results).toMatchSnapshot();
+
+    await app.close();
+  });
+
+  it('integrates with @stilt/jwt-sessions', async () => {
+    const WithSession = makeControllerInjector<[], { jwt: StiltJwtSessions }>({
+      dependencies: {
+        jwt: StiltJwtSessions,
+      },
+      async run(_ignore, { jwt }) {
+        const session = await jwt.getCurrentSession();
+
+        assert(session != null, 'session is nullish!');
+        // @ts-expect-error
+        assert(session.sub != null, 'session should not be empty');
+
+        return { session };
+      },
+    });
+
+    class MyResolver {
+      @WithSession(0)
+      @OnSubscription('newComment')
+      async *onSubscriptionToNewComment() {
+        yield { content: 'first comment' };
+      }
+    }
+
+    const [app, port] = await buildSimpleApp();
+    await app.use(StiltJwtSessions.configure({
+      secret: 'my-unsafe-secret',
+    }));
+
+    await app.use(StiltGraphQl.configure({
+      resolversGlob: false,
+      typeDefsGlob: false,
+      resolvers: [MyResolver],
+      typeDefs: [`
+        type Query {
+          dummy: Boolean
+        }
+
+        type Comment {
+          content: String!
+        }
+
+        type Subscription {
+          newComment: Comment!
+        }
+      `],
+    }));
+
+    await app.start();
+
+    const results = await collectSubscription(port, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NyJ9.xUE5hP52MUMkSC_tZtTShHKitdVqPufywVc7aQMEdNg', `subscription { newComment { content } }`);
     expect(results).toMatchSnapshot();
 
     await app.close();
   });
 });
 
-async function collectSubscription(port: number, query: string) {
+async function collectSubscription(port: number, authToken: string, query: string) {
   const client = createClient({
     url: `ws://localhost:${port}/graphql`,
     webSocketImpl: ws,
     generateID: () => crypto.randomUUID(),
+    connectionParams: { authToken },
   });
 
   return new Promise((resolve, reject) => {

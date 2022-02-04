@@ -26,6 +26,7 @@
     "nanoid": "^3.1.23"
   },
   "devDependencies": {
+    "@stilt/jwt-sessions": "^0.21.0-alpha.20",
     "@types/node-fetch": "^2.5.12",
     "get-port": "^5.1.1",
     "node-fetch": "^2.6.7",
