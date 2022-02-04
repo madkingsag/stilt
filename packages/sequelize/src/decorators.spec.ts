@@ -89,8 +89,9 @@ describe('@BelongsTo', () => {
         // @ts-expect-error
         inverse: 'a',
       })
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       class A {}
+
+      expect(A).toEqual(A); // mute "unused" error
     } catch (e) {
       expect(e.message).toEqual('@BelongsTo "inverse" property must be an object');
     }
@@ -276,8 +277,6 @@ describe('@BelongsToMany', () => {
 
     @HasMany(B, {
       as: 'b',
-      through: 'a_to_b',
-
       inverse: 'a',
     })
     class A {}
@@ -287,14 +286,12 @@ describe('@BelongsToMany', () => {
       type: 'hasMany',
       parameters: [B, {
         as: 'b',
-        through: 'a_to_b',
       }],
     }, {
       model: B,
       type: 'belongsTo',
       parameters: [A, {
         as: 'a',
-        through: 'a_to_b',
       }],
     }]);
   });
