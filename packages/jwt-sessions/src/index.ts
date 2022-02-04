@@ -97,13 +97,19 @@ export class StiltJwtSessions {
 
     koa.use(async (ctx, next) => {
       return next().then(() => {
-        const liveSession = this.getSessionFromContext(ctx);
-
+        // @ts-expect-error
+        const liveSession = ctx[LiveSessionKey];
         // @ts-expect-error
         const sessionCopy = ctx[ImmutableSessionKey];
 
         // check if mutable session has changed & send new session through headers if it did.
-        if (!NodeUtil.isDeepStrictEqual(liveSession, sessionCopy)) {
+        if (liveSession != null && !NodeUtil.isDeepStrictEqual(liveSession, sessionCopy)) {
+          if (ctx.response == null) {
+            console.warn('Session has been modified in a context that does not support Session changes (such as websockets). Changes have been discarded.');
+
+            return;
+          }
+
           const validSecrets = getSecrets(config.secret);
 
           const secretUsedForSigning = validSecrets.at(-1);
