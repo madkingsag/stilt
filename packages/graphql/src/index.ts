@@ -359,12 +359,14 @@ export class StiltGraphQl {
   }
 
   async #start() {
-    const webSocketServer = await this.#httpServer.startWebSocketServer('/graphql');
+    if (this.#schema.getSubscriptionType() != null) {
+      const webSocketServer = await this.#httpServer.startWebSocketServer('/graphql');
 
-    useWsServer({
-      ...this.#config.subscriptionConfig,
-      schema: this.#schema,
-    }, webSocketServer);
+      useWsServer({
+        ...this.#config.subscriptionConfig,
+        schema: this.#schema,
+      }, webSocketServer);
+    }
   }
 }
 
