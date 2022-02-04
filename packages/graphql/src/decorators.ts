@@ -176,6 +176,9 @@ function normalizeFunction(
       graphqlQuery = koaContext;
       koaContext = graphqlQueryParameters;
       graphqlQueryParameters = {};
+    } else if (graphqlQueryParameters == null) {
+      // The resolver that gets called after a subscription yields a value can receive undefined for `graphqlQueryParameters`
+      graphqlQueryParameters = Object.create(null);
     }
 
     if (parent != null) {
