@@ -121,7 +121,7 @@ describe('Subscriptions', () => {
     await app.close();
   });
 
-  it.only('supports custom controller injectors', async () => {
+  it('supports custom controller injectors', async () => {
     class MyResolver {
       @WithViewer(0)
       @OnSubscription('newComment')
