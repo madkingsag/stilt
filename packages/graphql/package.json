@@ -1,6 +1,6 @@
 {
   "name": "@stilt/graphql",
-  "version": "0.21.0-alpha.22",
+  "version": "0.21.0-alpha.23",
   "description": "GraphQL Module for Stilt Framework",
   "main": "dist/index.js",
   "type": "module",
@@ -26,7 +26,7 @@
     "nanoid": "^3.1.23"
   },
   "devDependencies": {
-    "@stilt/jwt-sessions": "^0.21.0-alpha.22",
+    "@stilt/jwt-sessions": "^0.21.0-alpha.23",
     "@types/node": "^16.11.22",
     "@types/node-fetch": "^2.5.12",
     "get-port": "^5.1.1",
