@@ -10,8 +10,8 @@ export const IsDevError = Symbol('IsDevError');
 
 // UserErrors will be sent to the user
 export class DevError extends Error {
-  constructor() {
-    super();
+  constructor(message: string) {
+    super(message);
     this.name = 'DevError';
   }
 
