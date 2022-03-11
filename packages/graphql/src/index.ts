@@ -367,11 +367,11 @@ export class StiltGraphQl {
         ...this.#config.subscriptionConfig,
         schema: this.#schema,
         onConnect: async ctx => {
-          const authToken = ctx.connectionParams?.authToken;
 
-          if (authToken) {
+          if (ctx.connectionParams) {
             const httpContext = this.#httpServer.getCurrentContext();
-            httpContext.authToken = authToken;
+            httpContext.graphqlSubscriptionConnectionParams = ctx.connectionParams;
+            httpContext.authToken = ctx.connectionParams.authToken;
           }
 
           await this.#config.subscriptionConfig?.onConnect?.(ctx);
