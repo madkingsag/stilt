@@ -31,7 +31,7 @@
     "@stilt/core": "^0.21.0-alpha.21",
     "@stilt/http": "^0.21.0-alpha.21",
     "@stilt/util": "^0.21.0-alpha.21",
-    "jsonwebtoken": "^8.3.0",
+    "jsonwebtoken": "^9.0.0",
     "koa-jwt": "^3.3.2",
     "lodash": "^4.17.10"
   },
